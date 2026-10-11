@@ -16,8 +16,8 @@
 | Diagnose *Cloud-Verbindung* (Gerät gerade mit der Cloud verbunden) | ✅ |
 | Rezept als „Privat“ speichern (erscheint am Gerät) | ⏳ braucht Bild-Upload – vorerst Entwurf, Bild auf der Website ergänzen |
 | Einkaufsliste als To-do-Liste, Wochenplaner als Kalender | ⏳ geplant |
-| Anmeldung mit E-Mail/Passwort | ⏳ geplant – vorerst Refresh-Token |
-| Live-Status (Temperatur, Restzeit, fertig) | ❌ liefert die Cloud nicht. Nur per Root möglich, siehe [MCS2MQTT](https://github.com/AroPix/MCS2MQTT) |
+| Anmeldung (Lidl-Login direkt in Home Assistant) | ✅ Einrichtungs-Dialog |
+| Live-Status beim Kochen (Zustand, Zieltemperatur, Stufe, Restzeit) | ✅ über die Cloud (gRPC) nachgewiesen & entschlüsselt – für den MC Smart; Sensoren in Arbeit |
 
 ## Beispiel
 
@@ -67,7 +67,7 @@ python3 tools/mc_cli.py parse "10 Min./100 °C/Stufe 1"
 python3 tools/mc_cli.py preview --schema rezept.json
 ```
 
-Die Schnittstelle ist in [`docs/api.md`](docs/api.md) beschrieben (ohne Zugangsdaten).
+Einrichtung Schritt für Schritt: [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
 Die Bibliothek `mcbridge` hat keine Abhängigkeit von Home Assistant.
 
 ---
@@ -76,7 +76,8 @@ Die Bibliothek `mcbridge` hat keine Abhängigkeit von Home Assistant.
 
 Unofficial Home Assistant integration for the Lidl *Monsieur Cuisine Smart*. Converts recipes (schema.org pages or JSON)
 into Monsieur Cuisine recipes with machine steps (time / temperature / speed / reverse / scale) and uploads them to your
-account. No live cooking status – the vendor cloud does not expose it. Alpha, German recipes only so far.
+account. Live cooking status (state, target temperature, speed, remaining time) is available via the vendor cloud (gRPC)
+for the MC Smart — decoded, sensors in progress. Alpha, German recipes only so far.
 
 ## Autor
 
