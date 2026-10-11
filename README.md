@@ -1,86 +1,80 @@
-# Monsieur Cuisine für Home Assistant (inoffiziell)
+# Monsieur Cuisine for Home Assistant (unofficial)
 
-> ⚠️ **Inoffiziell.** Keine Verbindung zu Lidl, SilverCrest oder Tecpal. Nutzt die nicht dokumentierte
-> Cloud-Schnittstelle der Monsieur-Cuisine-App. Kann jederzeit durch Änderungen des Herstellers brechen.
-> Nur für das eigene Konto, schonend (max. 1 Aufruf pro Sekunde, Abfrage alle 15 Minuten).
+> ⚠️ **Unofficial.** Not affiliated with Lidl, SilverCrest or Tecpal. Uses the undocumented
+> cloud interface of the Monsieur Cuisine app. May break at any time if the vendor changes things.
+> For your own account only, gentle polling (max. 1 request/second, every 15 minutes).
 
-**Status: Alpha (v0.1)** – getestet mit dem *Monsieur Cuisine Smart* (MC3.0).
+**Status: Alpha (v0.1)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
-## Was sie kann
+👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md)
 
-| Funktion | Stand |
+## What it does
+
+| Feature | State |
 |---|---|
-| **Rezept senden** (`monsieur_cuisine.send_recipe`): Rezeptseite (schema.org/Recipe, z. B. Chefkoch, Mealie) oder JSON → eigenes Rezept mit **Maschinenschritten** | ✅ Format verifiziert |
-| **Schritt-Übersetzer**: „30 Sek./Stufe 5“, „10 Min./100 °C/Linkslauf/Stufe 1“, „250 g einwiegen“ → Gerätewerte | ✅ |
-| Sensor *Eigene Rezepte* | ✅ |
-| Diagnose *Cloud-Verbindung* (Gerät gerade mit der Cloud verbunden) | ✅ |
-| Rezept als „Privat“ speichern (erscheint am Gerät) | ⏳ braucht Bild-Upload – vorerst Entwurf, Bild auf der Website ergänzen |
-| Einkaufsliste als To-do-Liste, Wochenplaner als Kalender | ⏳ geplant |
-| Anmeldung (Lidl-Login direkt in Home Assistant) | ✅ Einrichtungs-Dialog |
-| Live-Status beim Kochen (Zustand, Zieltemperatur, Stufe, Restzeit) | ✅ über die Cloud (gRPC) nachgewiesen & entschlüsselt – für den MC Smart; Sensoren in Arbeit |
+| **Send recipe** (`monsieur_cuisine.send_recipe`): a recipe page (schema.org/Recipe, e.g. Chefkoch, Mealie) or JSON → your own recipe with **machine steps** | ✅ format verified |
+| **Step translator**: “30 sec/speed 5”, “10 min/100 °C/reverse/speed 1”, “weigh 250 g” → device values | ✅ |
+| Sensor *Own recipes* | ✅ |
+| Diagnostic *Cloud connection* (device currently connected to the cloud) | ✅ |
+| Sign-in (Lidl login directly in Home Assistant) | ✅ setup dialog |
+| **Live cooking status** (state, target temperature, speed, remaining time) | ✅ via the cloud (gRPC), decoded – for the MC Smart; sensors in progress |
+| Save recipe as “private” (shows up on the device) | ⏳ needs image upload – draft for now, add the picture on the website |
+| Shopping list as a to-do list, weekly planner as a calendar | ⏳ planned |
 
-## Beispiel
+## Example
 
 ```yaml
 action: monsieur_cuisine.send_recipe
 data:
-  url: https://example.org/rezept/tomatensuppe
-  dry_run: true   # erst Vorschau ansehen
+  url: https://example.org/recipe/tomato-soup
+  dry_run: true   # preview first
 ```
 
-Antwort (gekürzt):
+Response (shortened):
 
 ```yaml
-title: Tomatensuppe
+title: Tomato soup
 steps:
-  - title: Zerkleinern
-    setting: 5 Sek. / Stufe 5
-  - title: Garen
-    setting: 20 Min. / 100 °C / Stufe 1 / Linkslauf
-  - title: Sahne unterrühren
+  - title: Chop
+    setting: 5 sec / speed 5
+  - title: Cook
+    setting: 20 min / 100 °C / speed 1 / reverse
+  - title: Stir in cream
     setting: null
 warnings: []
 ```
 
-Ohne `dry_run` wird das Rezept als **Entwurf** im Konto angelegt (`recipe_id` in der Antwort).
-Mit `recipe_id` wird ein bestehendes eigenes Rezept überschrieben.
+Without `dry_run` the recipe is created as a **draft** in your account (`recipe_id` in the response).
+With `recipe_id` an existing recipe of yours is overwritten.
 
-## Einschränkungen des Übersetzers
+## Translator limitations
 
-- Turbo wird noch nicht übernommen (bleibt als Text, Warnung).
-- „Varoma“ wird als 120 °C übernommen – für Dampfgaren besser das Programm „Dampfgaren“ wählen.
-- Halbe Stufen (z. B. 4,5) werden aufgerundet.
-- Einheiten, die der Monsieur-Cuisine-Editor nicht kennt (ml, Päckchen, Dose …), wandern in Klammern an den Zutatennamen.
-- Alles Erkannte ist ein **Vorschlag** – vor dem Kochen im Rezept prüfen.
+- Turbo is not applied yet (kept as text, with a warning).
+- “Varoma” is applied as 120 °C – for steaming, pick the “Steam” program instead.
+- Half speeds (e.g. 4.5) are rounded up.
+- Units the Monsieur Cuisine editor doesn’t know (ml, packet, can …) are appended in brackets to the ingredient name.
+- Everything detected is a **suggestion** – check it in the recipe before cooking.
 
-## Installation (HACS, benutzerdefiniertes Repository)
+## Installation (HACS, custom repository)
 
-1. HACS → Integrationen → ⋮ → Benutzerdefinierte Repositories → dieses Repo, Kategorie *Integration*.
-2. „Monsieur Cuisine (inoffiziell)“ installieren, HA neu starten.
-3. Einstellungen → Geräte & Dienste → Integration hinzufügen → *Monsieur Cuisine*.
+1. HACS → top right ⋮ → **Custom repositories** → this repo, category *Integration*.
+2. Install “Monsieur Cuisine (unofficial)”, restart Home Assistant.
+3. Settings → Devices & Services → Add integration → *Monsieur Cuisine*.
 
-## Entwicklung
+Step-by-step (German): [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
+
+## Development
 
 ```bash
-python3 -m pytest tests            # Übersetzer und Payload
-python3 tools/mc_cli.py parse "10 Min./100 °C/Stufe 1"
-python3 tools/mc_cli.py preview --schema rezept.json
+python3 -m pytest tests            # translator and payload
+python3 tools/mc_cli.py parse "10 min/100 °C/speed 1"
+python3 tools/mc_cli.py preview --schema recipe.json
 ```
 
-Einrichtung Schritt für Schritt: [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
-Die Bibliothek `mcbridge` hat keine Abhängigkeit von Home Assistant.
+The `mcbridge` library has no dependency on Home Assistant.
 
----
+## Author
 
-### English (short)
+Built by **MrVain74** ([@MrVain74](https://github.com/MrVain74)). Unofficial, not affiliated with Lidl, SilverCrest or Tecpal. Thanks to everyone helping to test.
 
-Unofficial Home Assistant integration for the Lidl *Monsieur Cuisine Smart*. Converts recipes (schema.org pages or JSON)
-into Monsieur Cuisine recipes with machine steps (time / temperature / speed / reverse / scale) and uploads them to your
-account. Live cooking status (state, target temperature, speed, remaining time) is available via the vendor cloud (gRPC)
-for the MC Smart — decoded, sensors in progress. Alpha, German recipes only so far.
-
-## Autor
-
-Entwickelt von **MrVain74** ([@MrVain74](https://github.com/MrVain74)). Inoffiziell, ohne Verbindung zu Lidl, SilverCrest oder Tecpal. Dank an alle, die beim Testen helfen.
-
-Lizenz: MIT
+License: MIT
