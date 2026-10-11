@@ -20,7 +20,14 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .auth import McAuthError, PkcePair, authorize_url, code_from_redirect, login_with_code, new_pkce
+from .mcbridge.auth import (
+    McAuthError,
+    PkcePair,
+    authorize_url,
+    code_from_redirect,
+    login_with_code,
+    new_pkce,
+)
 from .const import (
     CONF_COMPANION_APP_ID,
     CONF_JWT,
