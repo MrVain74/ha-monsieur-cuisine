@@ -8,10 +8,10 @@
 - Home Assistant (aktuell), mit [HACS](https://hacs.xyz).
 - Ein **Monsieur-Cuisine-Konto** und einen gekoppelten **Monsieur Cuisine Smart**.
 - Einen **Browser am Computer** für die einmalige Anmeldung.
-- **Kein Zusatzprogramm nötig.** Empfohlen ist Variante A (ein Lesezeichen,
-  einmal in die Lesezeichen-Leiste gezogen). Wer den Browser-Helfer aus
-  `browser-helper/` installiert, bekommt die Anmeldung vollautomatisch;
-  nötig ist er nicht.
+- Empfohlen: den kleinen **Browser-Helfer** aus `browser-helper/` – damit läuft
+  die einmalige Anmeldung ohne Klick durch, und in Chrome ist er der einzige
+  zuverlässige Weg. **Nötig ist er nicht:** es geht auch ohne jedes
+  Zusatzprogramm (Varianten B und C).
 
 ## 1. Installation über HACS (benutzerdefiniertes Repository)
 1. HACS → oben rechts **⋮** → **Benutzerdefinierte Repositorys**.
@@ -24,35 +24,20 @@
 2. Nach **„Monsieur Cuisine"** suchen und auswählen.
 
 ## 3. Bei Lidl anmelden
-Beim Hinzufügen fragt HA, **wie** du dich anmelden willst:
+Beim Hinzufügen fragt HA, **wie** du dich anmelden willst. Alle drei Wege
+sind gleichwertig sicher: **E-Mail, Passwort und Captcha gibst du immer selbst
+bei Lidl ein**, Home Assistant sieht davon nichts.
 
-### Variante A – Ohne Zusatzprogramm (empfohlen)
-Keine Erweiterung, keine Installation, keine Berechtigungen – ein Klick.
+> **Warum es überhaupt drei Wege gibt:** Lidl schickt den Anmelde-Code nur an
+> eine fest in der Hersteller-App einkompilierte Adresse
+> (`lidl-com…://login/prod`). Diese Adresse kann ein Browser nicht an Home
+> Assistant weiterreichen – in Chrome nachgemessen: die Weiterleitung wird
+> **stillschweigend verworfen**, die Adresse erscheint nirgends, auch nicht in
+> der Adressleiste. Den Code kann daher nur abfangen, was *neben* der Seite
+> mitlesen darf: eine Browser-Erweiterung, oder du selbst von Hand.
 
-1. Im HA-Dialog **„Ohne Zusatzprogramm"** wählen → **Website öffnen**.
-   HA zeigt eine eigene kurze Anleitungsseite.
-2. **Einmalig:** den blauen Knopf **„Code an Home Assistant"** in die
-   **Lesezeichen-Leiste** ziehen (oder Rechtsklick → Lesezeichen hinzufügen).
-3. **„Zur Lidl-Anmeldung"** klicken und anmelden: **E-Mail, Passwort und
-   Captcha** – das machst du selbst.
-4. Danach bleibt eine **leere Seite** bei `accounts.lidl.com` stehen – richtig so.
-   Klick jetzt in der Lesezeichen-Leiste auf **„Code an Home Assistant"**.
-   Der HA-Dialog läuft **von allein** weiter.
-
-> **Warum das geht:** Lidl schickt den Anmelde-Code normalerweise an eine fest
-> in der Hersteller-App einkompilierte Adresse (`lidl-com…://login/prod`), die
-> ein Browser nicht an Home Assistant weitergeben kann. HA fragt die Anmeldung
-> deshalb mit `response_mode=form_post` an – dann antwortet Lidl mit einer
-> normalen Seite, in der der Code als verstecktes Formularfeld steht. Genau das
-> liest das Lesezeichen aus. Am Login selbst ändert sich nichts: Passwort und
-> Captcha bleiben vollständig bei dir und bei Lidl.
-
-> **Tut der Klick nichts?** Manche Browser (eher Firefox als Chrome) führen
-> Lesezeichen-Skripte auf dieser Seite nicht aus. Dann auf der leeren Seite den
-> **Seitenquelltext** anzeigen (`Strg`/`Cmd`+`U`), **alles kopieren** und in HA
-> über Variante C einfügen – HA findet den Code darin selbst.
-
-### Variante B – Vollautomatisch (mit Browser-Helfer)
+### Variante A – Mit Browser-Helfer (empfohlen)
+Der einzige Weg, der in Chrome zuverlässig und **ohne jeden Klick** läuft.
 Einmalig den **Browser-Helfer** installieren (Anleitung in `browser-helper/README.md`).
 Danach:
 
@@ -61,20 +46,54 @@ Danach:
 3. Der Helfer übergibt den Anmelde-Code automatisch an HA – der Dialog **schließt
    sich von allein** und das Gerät ist eingerichtet. Kein Kopieren, kein Klick.
 
-### Variante C – Manuell (einfügen)
+Der Helfer darf ausschließlich Weiterleitungen von `accounts.lidl.com` mitlesen
+und sonst nichts.
+
+### Variante B – Ohne Zusatzprogramm (Lesezeichen)
+Keine Erweiterung, keine Installation, keine Berechtigungen – ein Klick.
+**In Chrome aber fehleranfällig** (siehe Hinweise unten); in anderen Browsern
+oft problemlos.
+
+1. Im HA-Dialog **„Ohne Zusatzprogramm"** wählen → **Website öffnen**.
+   HA zeigt eine eigene Anleitungsseite.
+2. **Einmalig:** Lesezeichen anlegen – Knopf in die Lesezeichen-Leiste ziehen,
+   oder (in Chrome zuverlässiger) den dort angezeigten Quelltext kopieren und
+   im **Lesezeichen-Manager** unter *URL* einfügen.
+3. **„Zur Lidl-Anmeldung"** klicken und anmelden.
+4. Danach bleibt eine **leere Seite** bei `accounts.lidl.com` stehen – richtig so.
+   Klick jetzt dein Lesezeichen. Der HA-Dialog läuft **von allein** weiter.
+
+Dahinter steckt `response_mode=form_post`: Lidl antwortet dann mit einer
+gewöhnlichen Seite, in der der Code als verstecktes Formularfeld steht, statt
+mit der Weiterleitung auf die App-Adresse. Genau das liest das Lesezeichen.
+
+> **Zwei bekannte Haken in Chrome.** Erstens speichert Chrome ein *gezogenes*
+> `javascript:`-Lesezeichen oft nicht als ausführbar – der Klick öffnet dann nur
+> einen leeren Tab; deshalb der Weg über den Lesezeichen-Manager. Zweitens
+> schickt sich die Lidl-Seite sofort selbst an die App-Adresse, was Chrome mit
+> **„Die Informationen, die Sie senden möchten, sind nicht sicher"** unterbindet –
+> dann **einmal zurück**: landest du auf der leeren Seite, klick das Lesezeichen;
+> landest du wieder auf der Anmeldung, nimm Variante A oder C.
+
+### Variante C – Manuell (Quelltext einfügen)
+Die Rückfallebene, die in **jedem** Browser geht, ohne irgendeine Installation.
+
 1. Im HA-Dialog **„Manuell"** wählen.
-2. Klick auf **„die Lidl-Anmeldung"** (neuer Tab), anmelden (E-Mail, Passwort, Captcha).
-3. Nach dem Login wirst du auf eine Adresse weitergeleitet, die mit
-   **`lidl-com.monsieur-cuisine.Companion://login/prod?code=…`** beginnt. Der
-   Browser kann sie nicht öffnen (Fehlerseite) – **das ist normal**.
-4. **Kopiere die komplette Adresse** und füge sie in HA in das Eingabefeld ein
-   → **Bestätigen**.
+2. Klick auf **die Lidl-Anmeldung** (neuer Tab) und melde dich an.
+3. Danach erscheint eine **leere oder fast leere Seite** bei `accounts.lidl.com`
+   (kommt vorher die Warnung „… nicht sicher", einmal auf **Zurück**).
+4. Auf dieser Seite **Rechtsklick → „Seitenquelltext anzeigen"**
+   (`Strg`/`Cmd`+`U`), **alles markieren und kopieren**.
+5. Den Text unten einfügen → **Bestätigen**. HA findet den Code darin selbst.
 
-> Das Feld nimmt dreierlei: die **Weiterleitungs-Adresse**, den **Seitenquelltext**
-> der leeren Seite aus Variante A, oder den **Code allein**.
+Das Feld nimmt dreierlei: **Seitenquelltext**, eine **Weiterleitungs-Adresse**
+oder den **Code allein**.
 
-> Hinweis: Chrome zeigt die `lidl-com…`-Adresse nicht immer in der Adressleiste.
-> Wenn du sie dort nicht siehst, nimm **Variante A** – die braucht sie nicht.
+> **Sicherer Weg, wenn die Seite zu schnell weiterspringt** (Chrome): Vor dem
+> Login `F12` drücken und den Reiter **Netzwerk** offen lassen. Nach der
+> Anmeldung den Eintrag **`login/prod`** anklicken → **Nutzlast/Payload** → den
+> Wert von `code` kopieren und in HA einfügen. Das klappt immer, ist aber
+> technischer.
 
 Fertig – Home Assistant richtet dein Gerät automatisch ein.
 
@@ -93,6 +112,13 @@ Fertig – Home Assistant richtet dein Gerät automatisch ein.
 - **„Verbindung fehlgeschlagen":** Netz/Cloud gerade nicht erreichbar – später erneut.
 - **Gerät zeigt „getrennt":** Der Monsieur meldet sich nach kurzer Zeit selbst von der Cloud ab
   (Stromsparen). Beim Kochen ist er verbunden.
+- **Lesezeichen-Klick öffnet nur einen leeren Tab:** Chrome hat beim Ziehen den
+  `javascript:`-Teil verworfen. Lesezeichen über den **Lesezeichen-Manager** neu
+  anlegen (Quelltext von der HA-Hilfsseite kopieren) – oder Variante A/C nehmen.
+- **Dialog hängt, obwohl die Seite „Angemeldet" zeigte:** Das war ein Fehler bis
+  v0.3.2 – der Code kam an, aber Home Assistant schloss den Vorgang nicht ab.
+  Ab v0.3.3 schließt die Empfangs-Adresse den Dialog selbst ab, auch wenn er
+  nicht mehr offen ist. Bitte aktualisieren.
 
 ## Datenschutz
 - Es werden **keine Zugangsdaten** gespeichert – nur die Sitzungs-Tokens der Cloud (im HA-Eintrag).

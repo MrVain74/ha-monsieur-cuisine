@@ -5,22 +5,22 @@
         "title": "Monsieur Cuisine verbinden",
         "description": "**Inoffiziell** – keine Verbindung zu Lidl, SilverCrest oder Tecpal.\n\nWie möchtest du dich anmelden?",
         "menu_options": {
-          "bookmark": "Ohne Zusatzprogramm (empfohlen – mit Lesezeichen)",
-          "auto": "Mit Browser-Helfer (Erweiterung nötig)",
-          "manual": "Manuell (Adresse selbst einfügen)"
+          "auto": "Mit Browser-Helfer (empfohlen – läuft von allein)",
+          "bookmark": "Ohne Zusatzprogramm (Lesezeichen – in Chrome fehleranfällig)",
+          "manual": "Manuell (Quelltext einfügen – geht in jedem Browser)"
         }
-      },
-      "bookmark": {
-        "title": "Bei Lidl anmelden – ohne Zusatzprogramm",
-        "description": "Klick unten auf **Website öffnen**. Home Assistant zeigt dir dann eine kurze Anleitung mit einem **Lesezeichen**, das du einmal in die Lesezeichen-Leiste ziehst.\n\nDanach meldest du dich bei Lidl an (E-Mail, Passwort, Captcha – das machst du selbst) und klickst einmal auf das Lesezeichen. Dieser Dialog läuft dann **von allein** weiter.\n\n_Keine Browser-Erweiterung, keine Installation, keine Berechtigungen._"
       },
       "auto": {
         "title": "Bei Lidl anmelden",
         "description": "**Einmalig nötig:** der kleine **Browser-Helfer**. Er fängt nach dem Login den Anmelde-Code ab und übergibt ihn automatisch – du musst nichts kopieren.\n\n➡️ **[Browser-Helfer herunterladen & installieren](https://github.com/MrVain74/ha-monsieur-cuisine/tree/main/browser-helper)** (kurze Anleitung dort, ca. 1 Min – nur beim ersten Mal).\n\nDanach unten **Website öffnen**, bei Lidl anmelden (E-Mail, Passwort, Captcha – das machst du selbst). Der Dialog schließt sich dann **von allein**.\n\n_Noch kein Helfer? Dann brich hier ab und wähle „Ohne Zusatzprogramm“._"
       },
+      "bookmark": {
+        "title": "Bei Lidl anmelden – ohne Zusatzprogramm",
+        "description": "Klick unten auf **Website öffnen**. Home Assistant zeigt dir dann eine kurze Anleitung mit einem **Lesezeichen**, das du einmal in die Lesezeichen-Leiste ziehst.\n\nDanach meldest du dich bei Lidl an (E-Mail, Passwort, Captcha – das machst du selbst) und klickst einmal auf das Lesezeichen. Dieser Dialog läuft dann **von allein** weiter.\n\n_Keine Browser-Erweiterung, keine Installation, keine Berechtigungen._"
+      },
       "manual": {
         "title": "Manuell anmelden",
-        "description": "1. Öffne **[die Lidl-Anmeldung]({login_url})** in einem neuen Tab und melde dich an (E-Mail, Passwort, Captcha – das machst du selbst).\n2. Danach erscheint eine **leere oder fast leere Seite** bei `accounts.lidl.com` (kommt vorher eine Warnung „Angaben … nicht sicher“, dann einmal auf **Zurück**).\n3. Auf dieser leeren Seite: **Rechtsklick → „Seitenquelltext anzeigen“** (oder `Strg/Cmd`+`U`), **alles markieren** (`Strg/Cmd`+`A`) und **kopieren**.\n4. Den kopierten Text unten einfügen → **Bestätigen**. Home Assistant findet den Anmelde-Code darin selbst.",
+        "description": "1. Öffne **[die Lidl-Anmeldung]({login_url})** in einem neuen Tab und melde dich an (E-Mail, Passwort, Captcha – das machst du selbst).\n2. Danach erscheint eine **leere oder fast leere Seite** bei `accounts.lidl.com` (kommt vorher eine Warnung „Angaben … nicht sicher“, dann einmal auf **Zurück**).\n3. Auf dieser leeren Seite: **Rechtsklick → „Seitenquelltext anzeigen“** (oder `Strg/Cmd`+`U`), **alles markieren** (`Strg/Cmd`+`A`) und **kopieren**.\n4. Den kopierten Text unten einfügen → **Bestätigen**. Home Assistant findet den Anmelde-Code darin selbst.\n\n_Geht der Quelltext nicht (Seite schon weitergesprungen)? In Chrome sicher: vor dem Login `F12` → Reiter **Netzwerk** offen lassen, anmelden, dort den Eintrag **`login/prod`** anklicken → **Nutzlast/Payload** → Wert von `code` kopieren und hier einfügen._",
         "data": {
           "redirect_url": "Seitenquelltext einfügen (Adresse oder Code gehen auch)"
         }

@@ -61,17 +61,28 @@ With `recipe_id` an existing recipe of yours is overwritten.
 2. Install “Monsieur Cuisine (unofficial)”, restart Home Assistant.
 3. Settings → Devices & Services → Add integration → *Monsieur Cuisine*.
 
-Sign-in offers **three ways**, no DevTools and no copy-paste of anything from
-developer tools:
+Lidl only ever hands the one-time code to an address compiled into the vendor
+app (`lidl-com…://login/prod`), and a browser cannot pass that on to Home
+Assistant – measured in Chrome, the redirect is **discarded silently** and the
+address appears nowhere, not even in the address bar. So sign-in offers
+**three ways**:
 
-- **Without any add-on (recommended):** HA serves a small helper page with a
-  **bookmark**. You drag it to your bookmarks bar once, sign in to Lidl, and click
-  it – the dialog finishes on its own. Works because HA requests the Lidl login with
-  `response_mode=form_post`, so the one-time code arrives on a normal page the
-  bookmark can read. No extension, no permissions.
-- **With the browser helper:** a tiny add-on from [`browser-helper/`](browser-helper/)
-  completes the login fully automatically (not even a click).
-- **Manual:** paste the redirect address, the page source, or just the code.
+- **With the browser helper (recommended):** a tiny add-on from
+  [`browser-helper/`](browser-helper/) completes the login fully automatically –
+  not even a click. It may only read redirects from `accounts.lidl.com`. In Chrome
+  this is the only reliable way.
+- **Without any add-on (bookmark):** HA serves a helper page with a **bookmark**
+  that reads the code off the Lidl page – no extension, no permissions, one click.
+  Works because HA requests the login with `response_mode=form_post`, so the code
+  arrives on a normal page. Chrome is finicky here: it tends to strip
+  `javascript:` from dragged bookmarks (use the bookmark manager instead) and
+  interrupts the page with an insecure-form warning.
+- **Manual (works in every browser):** sign in, show the page source of the
+  near-empty Lidl page and paste it – HA finds the code itself. A redirect
+  address or the bare code are accepted too.
+
+Your e-mail, password and the captcha always stay between you and Lidl; the
+captcha is never bypassed.
 
 Step-by-step (German): [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
 

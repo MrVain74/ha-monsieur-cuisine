@@ -20,6 +20,7 @@ from aiohttp import web
 
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
+from homeassistant.data_entry_flow import FlowResultType, UnknownFlow
 
 from .const import (
     CALLBACK_PATH,
@@ -121,6 +122,42 @@ class McCallbackView(HomeAssistantView):
                          "Home Assistant konnte die Anmeldung nicht abschließen. "
                          "Bitte den Login erneut starten.", ok=False)
 
+        # Den Flow selbst weitertreiben.
+        #
+        # Wichtig und leicht zu übersehen: Nach einem External Step setzt HA den
+        # Flow NICHT von allein fort. In ``data_entry_flow.async_configure``
+        # läuft die Schleife nur für ``SHOW_PROGRESS_DONE`` weiter; bei
+        # ``EXTERNAL_STEP_DONE`` kehrt sie zurück und feuert lediglich
+        # ``EVENT_DATA_ENTRY_FLOW_PROGRESSED`` für die Oberfläche. Den Schritt
+        # „finish" ruft dann nur der noch offene Einrichtungsdialog auf. Ist der
+        # Dialog zu (Tab geschlossen, Seite neu geladen, HA zwischendurch neu
+        # gestartet), wäre der Code angenommen – aber es entstünde kein Eintrag.
+        # Genau dieses Bild hatten wir. Also schließen wir hier selbst ab.
+        if result.get("type") is FlowResultType.EXTERNAL_STEP_DONE:
+            try:
+                result = await hass.config_entries.flow.async_configure(flow_id)
+            except UnknownFlow:
+                # Die Oberfläche war schneller und hat schon abgeschlossen.
+                _LOGGER.warning("MC-Callback: Flow war bereits abgeschlossen")
+                return _page("Angemeldet",
+                             "Alles erledigt – du kannst dieses Fenster schließen "
+                             "und zu Home Assistant zurückkehren.")
+            except Exception as err:  # noqa: BLE001
+                _LOGGER.warning("MC-Callback: finish fehlgeschlagen: %s", err)
+                return _page("Anmeldung fehlgeschlagen",
+                             "Home Assistant konnte die Anmeldung nicht abschließen. "
+                             "Bitte den Login erneut starten.", ok=False)
+            _LOGGER.warning("MC-Callback: finish -> %s reason=%s",
+                            result.get("type"), result.get("reason"))
+
+        # Ergebnis ehrlich zurückmelden – vorher stand hier immer „Angemeldet",
+        # auch wenn der Abschluss in Wahrheit abgebrochen war.
+        if result.get("type") is FlowResultType.ABORT:
+            return _page("Anmeldung nicht abgeschlossen",
+                         f"Home Assistant hat abgebrochen (Grund: "
+                         f"{result.get('reason')}). Bitte den Login in Home "
+                         f"Assistant erneut starten.", ok=False)
+
         return _page("Angemeldet",
                      "Alles erledigt – du kannst dieses Fenster schließen und "
                      "zu Home Assistant zurückkehren.")
@@ -169,25 +206,50 @@ def _bookmarklet(callback_url: str) -> str:
 
 
 def _login_page(authorize: str, callback_url: str) -> web.Response:
-    """Seite mit Lesezeichen zum Ziehen und Knopf zur Lidl-Anmeldung."""
-    mark = html_escape(_bookmarklet(callback_url), quote=True)
+    """Seite mit Lesezeichen (zum Ziehen oder Kopieren) und Lidl-Knopf.
+
+    Chrome speichert ein gezogenes ``javascript:``-Lesezeichen nicht zuverlässig
+    als ausführbar – beim Klick landet man dann auf einer leeren Seite oder in
+    der Suche. Deshalb steht der Quelltext hier zusätzlich zum Kopieren: über
+    den Lesezeichen-Manager eingefügt, bleibt er erhalten.
+    """
+    bookmarklet = _bookmarklet(callback_url)
+    mark = html_escape(bookmarklet, quote=True)
     page = f"""<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Monsieur Cuisine – Anmeldung</title></head>
 <body style="font-family:system-ui,sans-serif;background:#f6f7f9;margin:0;
 padding:24px;display:flex;justify-content:center">
-<div style="background:#fff;border-radius:16px;padding:28px 32px;max-width:560px;
+<div style="background:#fff;border-radius:16px;padding:28px 32px;max-width:620px;
 box-shadow:0 2px 16px rgba(0,0,0,.08);line-height:1.55;color:#222">
 <h1 style="font-size:20px;margin:0 0 4px">Bei Lidl anmelden</h1>
 <p style="color:#666;margin:0 0 20px;font-size:14px">Inoffizielle Integration –
 keine Verbindung zu Lidl, SilverCrest oder Tecpal.</p>
 
-<p><b>Schritt 1 – einmalig:</b> Zieh diesen Knopf in deine Lesezeichen-Leiste
-(oder rechtsklick → Lesezeichen hinzufügen):</p>
-<p style="margin:14px 0 22px"><a href="{mark}"
+<p><b>Schritt 1 – einmalig:</b> Lesezeichen anlegen. Entweder diesen Knopf in
+die Lesezeichen-Leiste ziehen:</p>
+<p style="margin:14px 0 18px"><a href="{mark}"
 style="display:inline-block;background:#03a9f4;color:#fff;text-decoration:none;
 padding:10px 18px;border-radius:8px;font-weight:600"
 draggable="true">Code an Home&nbsp;Assistant</a></p>
+
+<details style="margin:0 0 22px;font-size:14px">
+<summary style="cursor:pointer;font-weight:600">In Chrome klappt das Ziehen
+oft nicht – so geht es dort zuverlässig</summary>
+<p style="margin:10px 0">Chrome verwirft bei gezogenen Lesezeichen gern den
+<code>javascript:</code>-Teil; der Klick öffnet dann nur einen leeren Tab.
+Zuverlässig ist der Lesezeichen-Manager:</p>
+<ol style="margin:10px 0 10px 18px;padding:0">
+<li>Text unten vollständig markieren und kopieren.</li>
+<li><code>Cmd</code>/<code>Strg</code>+<code>Shift</code>+<code>O</code> öffnet
+den Lesezeichen-Manager.</li>
+<li>Dort <b>⋮ → Neues Lesezeichen hinzufügen</b>, Name frei wählen, und den
+kopierten Text ins Feld <b>URL</b> einfügen.</li>
+</ol>
+<textarea readonly rows="4" onclick="this.select()" style="width:100%;
+box-sizing:border-box;font-family:ui-monospace,monospace;font-size:12px;
+padding:8px;border:1px solid #ccc;border-radius:6px">{html_escape(bookmarklet)}</textarea>
+</details>
 
 <p><b>Schritt 2:</b> Melde dich bei Lidl an (E-Mail, Passwort und Captcha machst
 du selbst):</p>
@@ -197,15 +259,16 @@ padding:10px 18px;border-radius:8px;font-weight:600">Zur Lidl-Anmeldung</a></p>
 
 <p><b>Schritt 3:</b> Nach der Anmeldung bleibt eine <b>leere oder fast leere
 Seite</b> bei <code>accounts.lidl.com</code> stehen – das ist richtig so. Klick
-dann oben in der Lesezeichen-Leiste auf <b>„Code an Home&nbsp;Assistant"</b>.
-Der Einrichtungsdialog in HA läuft danach von allein weiter.</p>
+dann in der Lesezeichen-Leiste auf dein Lesezeichen. Der Einrichtungsdialog in
+HA läuft danach von allein weiter.</p>
 
 <p style="background:#fff8e1;border-left:4px solid #ffb300;padding:10px 14px;
-border-radius:6px;font-size:14px;margin-top:22px"><b>Falls der Klick nichts
-tut</b> (manche Browser blockieren Lesezeichen-Skripte auf dieser Seite):
-Zeig den Seitenquelltext an (<code>Strg/Cmd</code>+<code>U</code>), kopiere
-alles und füge es in Home Assistant im Weg <b>„Manuell"</b> ein – HA findet den
-Code darin selbst.</p>
+border-radius:6px;font-size:14px;margin-top:22px"><b>Wenn Chrome „Die
+Informationen, die Sie senden möchten, sind nicht sicher" zeigt:</b> Diese
+Seite versucht sich selbst an die App-Adresse zu schicken, was Chrome
+unterbindet. Geh <b>einmal zurück</b>. Landest du auf der leeren Seite, klick
+das Lesezeichen. Landest du wieder auf der Anmeldung, nimm den Weg
+<b>„Mit Browser-Helfer"</b> – der ist in Chrome der verlässliche.</p>
 </div></body></html>"""
     return web.Response(text=page, content_type="text/html")
 

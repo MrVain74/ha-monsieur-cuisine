@@ -74,7 +74,7 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         # sie beim allerersten Hinzufügen (noch kein Config-Entry) auf 404.
         ensure_views(self.hass)
         return self.async_show_menu(
-            step_id="user", menu_options=["bookmark", "auto", "manual"]
+            step_id="user", menu_options=["auto", "bookmark", "manual"]
         )
 
     # --- Gemeinsam: state mit Flow-ID, HA-Empfangsadresse und Token ----------
