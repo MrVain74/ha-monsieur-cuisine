@@ -19,9 +19,18 @@ from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 
-from .const import CALLBACK_PATH, DATA_FLOW_TOKENS, DOMAIN
+from .const import CALLBACK_PATH, DATA_FLOW_TOKENS, DATA_VIEW_REGISTERED, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def ensure_callback_view(hass: HomeAssistant) -> None:
+    """Empfangs-Adresse registrieren (einmalig, auch schon während des Dialogs)."""
+    data = hass.data.setdefault(DOMAIN, {})
+    if data.get(DATA_VIEW_REGISTERED):
+        return
+    hass.http.register_view(McCallbackView())
+    data[DATA_VIEW_REGISTERED] = True
 
 
 def _decode_state(state: str) -> dict:

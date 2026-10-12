@@ -34,6 +34,7 @@ from .const import (
     DATA_FLOW_TOKENS,
     DOMAIN,
 )
+from .http import ensure_callback_view
 from .mcbridge.auth import (
     McAuthError,
     PkcePair,
@@ -60,6 +61,8 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
 
     # --- Auswahl --------------------------------------------------------------
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        # Empfangs-Adresse schon jetzt registrieren (läuft sonst erst beim Setup)
+        ensure_callback_view(self.hass)
         return self.async_show_menu(step_id="user", menu_options=["auto", "manual"])
 
     # --- Automatisch (Browser-Helfer, external step) --------------------------

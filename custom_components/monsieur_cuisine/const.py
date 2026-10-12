@@ -25,3 +25,5 @@ EVENT_RECIPE_SENT = f"{DOMAIN}_recipe_sent"
 CALLBACK_PATH = f"/api/{DOMAIN}/callback"
 # Ablage für laufende Login-Vorgänge (flow_id -> Sicherheits-Token)
 DATA_FLOW_TOKENS = "flow_tokens"
+# Merker, dass die Empfangs-Adresse (HTTP-View) registriert ist
+DATA_VIEW_REGISTERED = "view_registered"

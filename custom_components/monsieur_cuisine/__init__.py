@@ -29,7 +29,7 @@ from .const import (
     SERVICE_SEND_RECIPE,
 )
 from .coordinator import McCoordinator
-from .http import McCallbackView
+from .http import ensure_callback_view
 from .mcbridge import STATUS_DRAFT, build_payload, from_html, from_schema_org
 from .mcbridge.client import JwtAuth, McApiError, McClient
 
@@ -40,7 +40,7 @@ PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Einmalige Einrichtung: Empfangs-Adresse für den automatischen Login."""
     hass.data.setdefault(DOMAIN, {})
-    hass.http.register_view(McCallbackView())
+    ensure_callback_view(hass)
     return True
 
 SEND_SCHEMA = vol.Schema(
