@@ -115,10 +115,15 @@ Fertig – Home Assistant richtet dein Gerät automatisch ein.
 - **Lesezeichen-Klick öffnet nur einen leeren Tab:** Chrome hat beim Ziehen den
   `javascript:`-Teil verworfen. Lesezeichen über den **Lesezeichen-Manager** neu
   anlegen (Quelltext von der HA-Hilfsseite kopieren) – oder Variante A/C nehmen.
-- **Dialog hängt, obwohl die Seite „Angemeldet" zeigte:** Das war ein Fehler bis
-  v0.3.2 – der Code kam an, aber Home Assistant schloss den Vorgang nicht ab.
-  Ab v0.3.3 schließt die Empfangs-Adresse den Dialog selbst ab, auch wenn er
-  nicht mehr offen ist. Bitte aktualisieren.
+- **Dialog hängt, obwohl die Seite „Angemeldet" zeigte** (Fehler bis v0.3.2):
+  Der Code kam an, aber Home Assistant schloss den Vorgang nicht ab. Seit v0.3.3
+  schließt die Empfangs-Adresse selbst ab, auch wenn der Dialog nicht mehr offen
+  ist.
+- **„Anmeldung fehlgeschlagen (der Code gilt nur kurz)", obwohl die Anmeldung
+  gerade erst lief** (Fehler in v0.3.3): Dialog und Empfangs-Adresse lösten den
+  Einmal-Code gleichzeitig ein; Lidl gibt ihn nur einmal her, der zweite Versuch
+  endete mit `invalid_grant`. Ab v0.3.4 wird genau einmal eingelöst. Bitte auf
+  v0.3.4 aktualisieren.
 
 ## Datenschutz
 - Es werden **keine Zugangsdaten** gespeichert – nur die Sitzungs-Tokens der Cloud (im HA-Eintrag).

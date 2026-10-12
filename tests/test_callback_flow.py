@@ -82,6 +82,10 @@ def _load_view_module():
 
 VIEWS, CONST = _load_view_module()
 
+# Tests sollen nicht zwei Sekunden auf den Vortritt warten.
+VIEWS["_VORTRITT_SCHRITTE"] = 3
+VIEWS["_VORTRITT_TAKT"] = 0
+
 
 class FakeFlowManager:
     """Bildet die External-Step-Semantik von HA 2026.10 nach.
@@ -90,11 +94,21 @@ class FakeFlowManager:
     selbst ausgeführt – genau wie im echten HA.
     """
 
-    def __init__(self, finish_result):
+    def __init__(self, finish_result, flow_id="flow1"):
         self.finish_result = finish_result
+        self.flow_id = flow_id
         self.calls = []
         self.finish_ran = False
         self.flow_open = True
+        # Schließt der Dialog selbst ab, verschwindet der Flow aus async_progress
+        # noch während der Vortrittszeit der Empfangs-Adresse.
+        self.verschwindet_von_allein = False
+
+    def async_progress(self):
+        if self.verschwindet_von_allein:
+            self.flow_open = False
+            return []
+        return [{"flow_id": self.flow_id}] if self.flow_open else []
 
     async def async_configure(self, flow_id, user_input=None):
         self.calls.append(user_input)
@@ -199,3 +213,30 @@ def test_fremdes_token_wird_abgewiesen():
     response = _get({"code": "CODE123", "state": _state(token="falsch")}, manager)
     assert "Abgelaufen" in response.text
     assert manager.calls == [], "bei falschem Token darf der Flow nicht angefasst werden"
+
+
+def test_dialog_bekommt_vortritt():
+    """Schließt der offene Dialog selbst ab, fasst der Callback den Flow nicht an.
+
+    Das ist der Kern des v0.3.4-Fixes: vorher liefen Dialog und Empfangs-Adresse
+    gleichzeitig durch "finish" und loesten den Einmal-Code zweimal ein.
+    """
+    manager = FakeFlowManager({"type": FlowResultType.CREATE_ENTRY, "title": "MC"})
+    manager.verschwindet_von_allein = True
+    response = _get({"code": "CODE123", "state": _state()}, manager)
+
+    assert manager.calls == [{"code": "CODE123"}], \
+        "nach dem Vortritt darf kein zweiter async_configure-Aufruf kommen"
+    assert not manager.finish_ran
+    assert response.status == 200
+    assert "abgeschlossen" in response.text
+
+
+def test_ohne_dialog_schliesst_der_callback_ab():
+    """Bleibt der Flow offen (Dialog zu), treibt der Callback ihn selbst."""
+    manager = FakeFlowManager({"type": FlowResultType.CREATE_ENTRY, "title": "MC"})
+    response = _get({"code": "CODE123", "state": _state()}, manager)
+
+    assert manager.finish_ran
+    assert len(manager.calls) == 2
+    assert "Angemeldet" in response.text

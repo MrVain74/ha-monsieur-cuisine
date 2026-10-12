@@ -10,6 +10,7 @@ Es werden keine Zugangsdaten verarbeitet, nur der kurzlebige Einmal-Code.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -31,6 +32,17 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+# Wie lange die Empfangs-Adresse einem offenen Einrichtungsdialog den Vortritt
+# lässt, bevor sie selbst abschließt (siehe McCallbackView.get).
+_VORTRITT_SCHRITTE = 20
+_VORTRITT_TAKT = 0.1  # Sekunden → zusammen rund 2 s
+
+
+def _flow_offen(hass: HomeAssistant, flow_id: str) -> bool:
+    """Läuft dieser Einrichtungsdialog noch?"""
+    return any(flow["flow_id"] == flow_id
+               for flow in hass.config_entries.flow.async_progress())
 
 
 def ensure_views(hass: HomeAssistant) -> None:
@@ -122,18 +134,34 @@ class McCallbackView(HomeAssistantView):
                          "Home Assistant konnte die Anmeldung nicht abschließen. "
                          "Bitte den Login erneut starten.", ok=False)
 
-        # Den Flow selbst weitertreiben.
+        # Abschließen – aber nicht gleichzeitig mit dem Dialog.
         #
-        # Wichtig und leicht zu übersehen: Nach einem External Step setzt HA den
-        # Flow NICHT von allein fort. In ``data_entry_flow.async_configure``
-        # läuft die Schleife nur für ``SHOW_PROGRESS_DONE`` weiter; bei
-        # ``EXTERNAL_STEP_DONE`` kehrt sie zurück und feuert lediglich
-        # ``EVENT_DATA_ENTRY_FLOW_PROGRESSED`` für die Oberfläche. Den Schritt
-        # „finish" ruft dann nur der noch offene Einrichtungsdialog auf. Ist der
-        # Dialog zu (Tab geschlossen, Seite neu geladen, HA zwischendurch neu
-        # gestartet), wäre der Code angenommen – aber es entstünde kein Eintrag.
-        # Genau dieses Bild hatten wir. Also schließen wir hier selbst ab.
+        # Zwei Dinge, die zusammengehören:
+        #
+        # 1. HA setzt einen Flow nach einem External Step NICHT von allein fort.
+        #    In ``data_entry_flow.async_configure`` läuft die Schleife nur für
+        #    ``SHOW_PROGRESS_DONE`` weiter; bei ``EXTERNAL_STEP_DONE`` kehrt sie
+        #    zurück und feuert bloß ``EVENT_DATA_ENTRY_FLOW_PROGRESSED`` für die
+        #    Oberfläche. Ist der Dialog zu, ruft also niemand „finish" auf.
+        # 2. Ist der Dialog dagegen offen, ruft *er* „finish" auf – und wenn wir
+        #    es gleichzeitig tun, laufen zwei Treiber durch denselben Schritt.
+        #    Genau daran ist v0.3.3 gescheitert: beide lösten den Einmal-Code
+        #    ein, einer bekam ``invalid_grant``, und der erfolgreiche verlor
+        #    seinen Eintrag, weil der andere den Flow vorher abgebrochen hatte.
+        #
+        # Also: dem Dialog kurz den Vortritt lassen und nur selbst abschließen,
+        # wenn danach noch etwas offen ist. Die Einlösung selbst ist zusätzlich
+        # im Config-Flow gegen Doppelausführung gesichert (``_redeem_once``).
         if result.get("type") is FlowResultType.EXTERNAL_STEP_DONE:
+            for _ in range(_VORTRITT_SCHRITTE):
+                await asyncio.sleep(_VORTRITT_TAKT)
+                if not _flow_offen(hass, flow_id):
+                    _LOGGER.warning("MC-Callback: Dialog hat selbst abgeschlossen")
+                    return _page(
+                        "Anmeldung abgeschlossen",
+                        "Home Assistant hat den Vorgang beendet – das Ergebnis "
+                        "steht im Einrichtungsdialog. Du kannst dieses Fenster "
+                        "schließen.")
             try:
                 result = await hass.config_entries.flow.async_configure(flow_id)
             except UnknownFlow:

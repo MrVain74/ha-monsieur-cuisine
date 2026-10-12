@@ -17,6 +17,7 @@ umbiegen – daher diese drei Wege statt eines einfachen Redirects.
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import logging
@@ -67,6 +68,11 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         self._pkce: PkcePair | None = None
         self._code: str | None = None
         self._base: str = ""
+        # Ergebnis der Code-Einlösung; der Task sorgt dafür, dass sie genau
+        # einmal läuft, auch wenn der Schritt mehrfach aufgerufen wird.
+        self._login_task: asyncio.Task | None = None
+        self._login: dict[str, Any] | None = None
+        self._login_error: str | None = None
 
     # --- Auswahl --------------------------------------------------------------
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -91,6 +97,34 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         self._base = base
         return _b64url({"fid": self.flow_id, "cb": base + CALLBACK_PATH, "s": token})
 
+    # --- Code-Einlösung: genau EINMAL pro Vorgang ----------------------------
+    async def _redeem_once(self, code: str) -> None:
+        """Den Einmal-Code einlösen – und zwar garantiert nur ein einziges Mal.
+
+        Lidl gibt den Code nur einmal her; ein zweiter Tausch endet zwangsläufig
+        mit ``invalid_grant``. Genau das ist passiert, weil den Abschluss-Schritt
+        **zwei** Treiber aufrufen können: der noch offene Einrichtungsdialog
+        (den HA über ``EVENT_DATA_ENTRY_FLOW_PROGRESSED`` weckt) und die
+        Empfangs-Adresse. Deshalb hängt die Einlösung an einem gemeinsamen Task:
+        wer auch immer zweiter ist, wartet auf dasselbe Ergebnis statt den Code
+        erneut zu verbrennen.
+        """
+        if self._login_task is None:
+            session = async_get_clientsession(self.hass)
+            self._login_task = self.hass.async_create_task(
+                login_with_code(session, code, self._pkce.verifier)
+            )
+        try:
+            self._login = await self._login_task
+        except McAuthError as err:
+            self._login_error = "invalid_auth"
+            _LOGGER.warning("MC-Einloesung: fehlgeschlagen (McAuthError): %s", err)
+        except Exception as err:  # noqa: BLE001
+            self._login_error = "cannot_connect"
+            _LOGGER.warning("MC-Einloesung: Verbindung fehlgeschlagen: %s", err)
+        else:
+            _LOGGER.warning("MC-Einloesung: erfolgreich")
+
     # --- Lesezeichen (ohne Erweiterung, external step) ------------------------
     async def async_step_bookmark(
         self, user_input: dict[str, Any] | None = None
@@ -105,7 +139,10 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
             self._pkce = new_pkce()
 
         if user_input is not None and user_input.get("code"):
+            # Hier – nicht in "finish" – wird eingelöst: diesen Zweig ruft nur
+            # die Empfangs-Adresse auf, und zwar genau einmal pro Anmeldung.
             self._code = user_input["code"]
+            await self._redeem_once(self._code)
             return self.async_external_step_done(next_step_id="finish")
 
         state = self._new_state()
@@ -124,7 +161,10 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
 
         # Rückmeldung vom Helfer (über die Empfangs-Adresse) → Code gesetzt
         if user_input is not None and user_input.get("code"):
+            # Hier – nicht in "finish" – wird eingelöst: diesen Zweig ruft nur
+            # die Empfangs-Adresse auf, und zwar genau einmal pro Anmeldung.
             self._code = user_input["code"]
+            await self._redeem_once(self._code)
             return self.async_external_step_done(next_step_id="finish")
 
         # state trägt Flow-ID + HA-Empfangsadresse + Sicherheits-Token
@@ -137,17 +177,19 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
 
     # --- Abschluss (gemeinsam) ------------------------------------------------
     async def async_step_finish(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Nur noch den Eintrag anlegen – ohne Netzverkehr.
+
+        Die Einlösung ist absichtlich schon im External Step passiert (siehe
+        ``_redeem_once``). Dieser Schritt hier kann von zwei Seiten aufgerufen
+        werden; er muss deshalb billig und wiederholbar sein.
+        """
         self.hass.data.get(DOMAIN, {}).get(DATA_FLOW_TOKENS, {}).pop(self.flow_id, None)
-        session = async_get_clientsession(self.hass)
-        try:
-            result = await login_with_code(session, self._code, self._pkce.verifier)
-        except McAuthError as err:
-            _LOGGER.warning("MC-Finish: Anmeldung fehlgeschlagen (McAuthError): %s", err)
+        if self._login_error is not None:
+            return self.async_abort(reason=self._login_error)
+        if self._login is None:
+            _LOGGER.warning("MC-Finish: kein Anmeldeergebnis vorhanden")
             return self.async_abort(reason="invalid_auth")
-        except Exception as err:  # noqa: BLE001
-            _LOGGER.warning("MC-Finish: Verbindung fehlgeschlagen: %s", err)
-            return self.async_abort(reason="cannot_connect")
-        return await self._create(result)
+        return await self._create(self._login)
 
     # --- Manuell (Adresse einfügen) ------------------------------------------
     async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
