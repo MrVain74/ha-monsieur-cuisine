@@ -1,22 +1,26 @@
 """Einrichtung über die Oberfläche – Lidl-Login direkt in Home Assistant.
 
-Zwei Wege, der Nutzer wählt im ersten Schritt:
+Drei Wege, der Nutzer wählt im ersten Schritt:
 
-* **Automatisch (empfohlen):** Mit dem kleinen Browser-Helfer. HA zeigt „Bei Lidl
-  anmelden", der Nutzer meldet sich an (E-Mail, Passwort, Captcha – selbst), und
-  der Helfer schickt den `code` automatisch zurück an HA. Der Dialog läuft von
-  allein durch. Umgesetzt über HAs eingebauten Warte-Mechanismus (external step).
-* **Manuell (ohne Helfer):** Nutzer meldet sich an, kopiert die Weiterleitungs-
-  Adresse (`lidl-com…`) und fügt sie ein. Rückfallebene, falls kein Helfer da ist.
+* **Ohne Zusatzprogramm (empfohlen):** HA liefert eine eigene Hilfsseite mit einem
+  **Lesezeichen** aus. Lidl antwortet dank ``response_mode=form_post`` mit einer
+  normalen Seite (statt der Weiterleitung auf die App-Adresse), in der der ``code``
+  als verstecktes Feld steht. Das Lesezeichen liest ihn aus und ruft die HA-
+  Empfangsadresse auf. Kein Add-on, keine Installation, keine Berechtigungen.
+* **Mit Browser-Helfer:** Kleine Browser-Erweiterung fängt die Weiterleitung ab und
+  schickt den ``code`` vollautomatisch zurück – ganz ohne Klick.
+* **Manuell:** Nutzer meldet sich an und fügt die Weiterleitungs-Adresse, den
+  Seitenquelltext oder den nackten Code ein. Rückfallebene, die überall greift.
 
 Die feste Rückleit-Adresse der App (``lidl-com…``) lässt sich nicht auf HA
-umbiegen – deshalb der Helfer bzw. der eine manuelle Einfüge-Schritt.
+umbiegen – daher diese drei Wege statt eines einfachen Redirects.
 """
 from __future__ import annotations
 
 import base64
 import json
 import secrets
+import urllib.parse
 from typing import Any
 
 import voluptuous as vol
@@ -27,6 +31,7 @@ from homeassistant.helpers.network import NoURLAvailableError, get_url
 
 from .const import (
     CALLBACK_PATH,
+    LOGIN_PATH,
     CONF_COMPANION_APP_ID,
     CONF_JWT,
     CONF_LIDL_REFRESH_TOKEN,
@@ -34,12 +39,12 @@ from .const import (
     DATA_FLOW_TOKENS,
     DOMAIN,
 )
-from .http import ensure_callback_view
+from .http import ensure_views
 from .mcbridge.auth import (
     McAuthError,
     PkcePair,
     authorize_url,
-    code_from_redirect,
+    extract_code,
     login_with_code,
     new_pkce,
 )
@@ -58,12 +63,56 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._pkce: PkcePair | None = None
         self._code: str | None = None
+        self._base: str = ""
 
     # --- Auswahl --------------------------------------------------------------
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        # Empfangs-Adresse schon jetzt registrieren (läuft sonst erst beim Setup)
-        ensure_callback_view(self.hass)
-        return self.async_show_menu(step_id="user", menu_options=["auto", "manual"])
+        # Empfangs-Adresse und Hilfsseite schon jetzt registrieren – sonst laufen
+        # sie beim allerersten Hinzufügen (noch kein Config-Entry) auf 404.
+        ensure_views(self.hass)
+        return self.async_show_menu(
+            step_id="user", menu_options=["bookmark", "auto", "manual"]
+        )
+
+    # --- Gemeinsam: state mit Flow-ID, HA-Empfangsadresse und Token ----------
+    def _new_state(self) -> str | None:
+        """Erzeugt den ``state``; None, wenn HA seine eigene Adresse nicht kennt."""
+        token = secrets.token_urlsafe(8)
+        self.hass.data.setdefault(DOMAIN, {}).setdefault(DATA_FLOW_TOKENS, {})[
+            self.flow_id
+        ] = token
+        try:
+            base = get_url(self.hass, allow_external=True, allow_internal=True)
+        except NoURLAvailableError:
+            return None
+        self._base = base
+        return _b64url({"fid": self.flow_id, "cb": base + CALLBACK_PATH, "s": token})
+
+    # --- Lesezeichen (ohne Erweiterung, external step) ------------------------
+    async def async_step_bookmark(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Login über eine HA-eigene Hilfsseite mit Lesezeichen.
+
+        Lidl antwortet hier mit ``response_mode=form_post``, also mit einer
+        HTML-Seite statt einer Weiterleitung auf die App-Adresse. Das Lesezeichen
+        liest ``code`` und ``state`` daraus und ruft die Empfangs-Adresse auf.
+        """
+        if self._pkce is None:
+            self._pkce = new_pkce()
+
+        if user_input is not None and user_input.get("code"):
+            self._code = user_input["code"]
+            return self.async_external_step_done(next_step_id="finish")
+
+        state = self._new_state()
+        if state is None:
+            return self.async_abort(reason="no_url")
+        authorize = authorize_url(self._pkce, state=state, response_mode="form_post")
+        url = self._base + LOGIN_PATH + "?" + urllib.parse.urlencode(
+            {"state": state, "authorize": authorize}
+        )
+        return self.async_external_step(step_id="bookmark", url=url)
 
     # --- Automatisch (Browser-Helfer, external step) --------------------------
     async def async_step_auto(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -76,15 +125,9 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_external_step_done(next_step_id="finish")
 
         # state trägt Flow-ID + HA-Empfangsadresse + Sicherheits-Token
-        token = secrets.token_urlsafe(8)
-        self.hass.data.setdefault(DOMAIN, {}).setdefault(DATA_FLOW_TOKENS, {})[
-            self.flow_id
-        ] = token
-        try:
-            base = get_url(self.hass, allow_external=True, allow_internal=True)
-        except NoURLAvailableError:
+        state = self._new_state()
+        if state is None:
             return self.async_abort(reason="no_url")
-        state = _b64url({"fid": self.flow_id, "cb": base + CALLBACK_PATH, "s": token})
         return self.async_external_step(
             step_id="auto", url=authorize_url(self._pkce, state=state)
         )
@@ -110,7 +153,7 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             session = async_get_clientsession(self.hass)
             try:
-                code = code_from_redirect(user_input[CONF_REDIRECT_URL])
+                code = extract_code(user_input[CONF_REDIRECT_URL])
                 result = await login_with_code(session, code, self._pkce.verifier)
             except McAuthError:
                 errors["base"] = "invalid_auth"

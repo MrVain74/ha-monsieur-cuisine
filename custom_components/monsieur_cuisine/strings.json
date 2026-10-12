@@ -5,18 +5,25 @@
         "title": "Monsieur Cuisine verbinden",
         "description": "**Inoffiziell** – keine Verbindung zu Lidl, SilverCrest oder Tecpal.\n\nWie möchtest du dich anmelden?",
         "menu_options": {
-          "auto": "Automatisch (empfohlen – mit Browser-Helfer)",
+          "bookmark": "Ohne Zusatzprogramm (empfohlen – mit Lesezeichen)",
+          "auto": "Mit Browser-Helfer (Erweiterung nötig)",
           "manual": "Manuell (Adresse selbst einfügen)"
         }
       },
+      "bookmark": {
+        "title": "Bei Lidl anmelden – ohne Zusatzprogramm",
+        "description": "Klick unten auf **Website öffnen**. Home Assistant zeigt dir dann eine kurze Anleitung mit einem **Lesezeichen**, das du einmal in die Lesezeichen-Leiste ziehst.\n\nDanach meldest du dich bei Lidl an (E-Mail, Passwort, Captcha – das machst du selbst) und klickst einmal auf das Lesezeichen. Dieser Dialog läuft dann **von allein** weiter.\n\n_Keine Browser-Erweiterung, keine Installation, keine Berechtigungen._"
+      },
       "auto": {
         "title": "Bei Lidl anmelden",
-        "description": "**Einmalig nötig:** der kleine **Browser-Helfer**. Er fängt nach dem Login den Anmelde-Code ab und übergibt ihn automatisch an Home Assistant – du musst nichts kopieren.\n\n➡️ **[Browser-Helfer herunterladen & installieren](https://github.com/MrVain74/ha-monsieur-cuisine/tree/main/browser-helper)** (kurze Anleitung dort, ca. 1 Min – nur beim ersten Mal).\n\nDanach unten **Website öffnen**, bei Lidl anmelden (E-Mail, Passwort, Captcha – das machst du selbst). Der Dialog schließt sich dann **von allein**.\n\n_Ohne Helfer: abbrechen und „Manuell“ wählen._"
+        "description": "**Einmalig nötig:** der kleine **Browser-Helfer**. Er fängt nach dem Login den Anmelde-Code ab und übergibt ihn automatisch – du musst nichts kopieren.\n\n➡️ **[Browser-Helfer herunterladen & installieren](https://github.com/MrVain74/ha-monsieur-cuisine/tree/main/browser-helper)** (kurze Anleitung dort, ca. 1 Min – nur beim ersten Mal).\n\nDanach unten **Website öffnen**, bei Lidl anmelden (E-Mail, Passwort, Captcha – das machst du selbst). Der Dialog schließt sich dann **von allein**.\n\n_Noch kein Helfer? Dann brich hier ab und wähle „Ohne Zusatzprogramm“._"
       },
       "manual": {
         "title": "Manuell anmelden",
-        "description": "1. Öffne **[die Lidl-Anmeldung]({login_url})** in einem neuen Tab und melde dich an (E-Mail, Passwort, Captcha – das machst du selbst).\n2. Danach wirst du auf eine Adresse weitergeleitet, die mit `lidl-com…` beginnt. Der Browser zeigt dort meist eine Fehlerseite – **das ist normal**.\n3. Kopiere **die komplette Adresse** (aus der Adressleiste) und füge sie unten ein.",
-        "data": { "redirect_url": "Weiterleitungs-Adresse (beginnt mit lidl-com…)" }
+        "description": "1. Öffne **[die Lidl-Anmeldung]({login_url})** in einem neuen Tab und melde dich an (E-Mail, Passwort, Captcha – das machst du selbst).\n2. Danach wirst du auf eine Adresse weitergeleitet, die mit `lidl-com…` beginnt. Der Browser zeigt dort meist eine Fehlerseite – **das ist normal**.\n3. Kopiere **die komplette Adresse** (aus der Adressleiste) und füge sie unten ein.\n\n_Hat dir der Weg „Ohne Zusatzprogramm“ nur eine leere Seite hinterlassen? Dann zeig dort den Seitenquelltext an (`Strg/Cmd`+`U`), kopiere alles und füge es hier ein – der Code wird darin gefunden._",
+        "data": {
+          "redirect_url": "Weiterleitungs-Adresse, Seitenquelltext oder Code"
+        }
       }
     },
     "error": {
@@ -31,18 +38,38 @@
     }
   },
   "entity": {
-    "binary_sensor": { "cloud_connection": { "name": "Cloud-Verbindung" } },
-    "sensor": { "own_recipes": { "name": "Eigene Rezepte" } }
+    "binary_sensor": {
+      "cloud_connection": {
+        "name": "Cloud-Verbindung"
+      }
+    },
+    "sensor": {
+      "own_recipes": {
+        "name": "Eigene Rezepte"
+      }
+    }
   },
   "services": {
     "send_recipe": {
       "name": "Rezept an Monsieur Cuisine senden",
       "description": "Wandelt ein Rezept (Webseite mit schema.org-Daten oder JSON) in ein Monsieur-Cuisine-Rezept mit Maschinenschritten um und legt es im Konto an.",
       "fields": {
-        "url": { "name": "Rezept-URL", "description": "Webseite mit Rezept (schema.org/Recipe, z. B. Chefkoch, Mealie)." },
-        "recipe": { "name": "Rezept (JSON)", "description": "schema.org/Recipe-Objekt als Alternative zur URL." },
-        "recipe_id": { "name": "Bestehendes Rezept", "description": "ID eines eigenen Rezepts, das überschrieben werden soll." },
-        "dry_run": { "name": "Nur Vorschau", "description": "Nichts anlegen, nur die erkannten Schritte zurückgeben." }
+        "url": {
+          "name": "Rezept-URL",
+          "description": "Webseite mit Rezept (schema.org/Recipe, z. B. Chefkoch, Mealie)."
+        },
+        "recipe": {
+          "name": "Rezept (JSON)",
+          "description": "schema.org/Recipe-Objekt als Alternative zur URL."
+        },
+        "recipe_id": {
+          "name": "Bestehendes Rezept",
+          "description": "ID eines eigenen Rezepts, das überschrieben werden soll."
+        },
+        "dry_run": {
+          "name": "Nur Vorschau",
+          "description": "Nichts anlegen, nur die erkannten Schritte zurückgeben."
+        }
       }
     }
   }

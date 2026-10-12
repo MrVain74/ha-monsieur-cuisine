@@ -4,7 +4,7 @@
 > cloud interface of the Monsieur Cuisine app. May break at any time if the vendor changes things.
 > For your own account only, gentle polling (max. 1 request/second, every 15 minutes).
 
-**Status: Alpha (v0.1)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
+**Status: Alpha (v0.3)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
 👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md)
 
@@ -59,12 +59,20 @@ With `recipe_id` an existing recipe of yours is overwritten.
 
 1. HACS → top right ⋮ → **Custom repositories** → this repo, category *Integration*.
 2. Install “Monsieur Cuisine (unofficial)”, restart Home Assistant.
-3. **Sign-in helper (one-time, recommended):** install the small browser add-on
-   from [`browser-helper/`](browser-helper/) so the Lidl login completes
-   automatically (no copy/paste, no DevTools). Details in its README.
-4. Settings → Devices & Services → Add integration → *Monsieur Cuisine* → **Automatic**.
+3. Settings → Devices & Services → Add integration → *Monsieur Cuisine*.
 
-Without the helper you can still use **Manual** sign-in (paste the redirect address).
+Sign-in offers **three ways**, no DevTools and no copy-paste of anything from
+developer tools:
+
+- **Without any add-on (recommended):** HA serves a small helper page with a
+  **bookmark**. You drag it to your bookmarks bar once, sign in to Lidl, and click
+  it – the dialog finishes on its own. Works because HA requests the Lidl login with
+  `response_mode=form_post`, so the one-time code arrives on a normal page the
+  bookmark can read. No extension, no permissions.
+- **With the browser helper:** a tiny add-on from [`browser-helper/`](browser-helper/)
+  completes the login fully automatically (not even a click).
+- **Manual:** paste the redirect address, the page source, or just the code.
+
 Step-by-step (German): [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
 
 ## Development

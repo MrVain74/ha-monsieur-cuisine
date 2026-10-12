@@ -15,6 +15,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import secrets
 import urllib.parse
 import uuid
@@ -54,12 +55,19 @@ def new_pkce() -> PkcePair:
 
 
 def authorize_url(pkce: PkcePair, country: str = "DE", language: str = "de-DE",
-                  state: str | None = None) -> str:
+                  state: str | None = None, response_mode: str | None = None) -> str:
     """Browser-Link für den Lidl-Login (Nutzer löst dort auch das Captcha).
 
     ``state`` kann überschrieben werden: Beim automatischen Weg (Browser-Helfer)
     trägt der ``state`` die HA-Empfangsadresse, damit der Helfer den Code dorthin
     schicken kann. Lidl gibt den ``state`` unverändert in der Weiterleitung zurück.
+
+    ``response_mode="form_post"`` ändert die Art der Rückgabe: Lidl antwortet dann
+    nicht mit einer Weiterleitung auf die App-Adresse, sondern mit einer normalen
+    HTML-Seite auf accounts.lidl.com, die ``code`` und ``state`` als versteckte
+    Formularfelder enthält. Dort kann das HA-Lesezeichen sie auslesen – damit
+    entfällt die Browser-Erweiterung. Lidl akzeptiert diesen Modus für den
+    App-Client (nachgeprüft am 12.10.2026; Discovery führt form_post/query/fragment).
     """
     q = {
         "prompt": "login", "response_type": "code", "client_id": CLIENT_ID,
@@ -68,6 +76,8 @@ def authorize_url(pkce: PkcePair, country: str = "DE", language: str = "de-DE",
         "state": state or pkce.state, "nonce": pkce.nonce,
         "CountryCode": country, "Language": language,
     }
+    if response_mode:
+        q["response_mode"] = response_mode
     return f"{ACCOUNTS}/connect/authorize?" + urllib.parse.urlencode(q)
 
 
@@ -78,6 +88,46 @@ def code_from_redirect(redirect_url: str) -> str:
     if "code" not in params:
         raise McAuthError("In der eingefügten Adresse steckt kein 'code='.")
     return params["code"][0]
+
+
+_HTML_CODE = re.compile(
+    r"""<input[^>]*\bname=['"]?code['"]?[^>]*\bvalue=['"]([^'"]+)['"]""",
+    re.IGNORECASE,
+)
+_BARE_CODE = re.compile(r"^[A-Za-z0-9._~\-]{16,}$")
+
+
+def extract_code(text: str) -> str:
+    """Holt den `code` aus allem, was ein Nutzer einfügen könnte.
+
+    Drei Formen werden erkannt – so passt der manuelle Weg zu beiden
+    Rückgabe-Arten (Weiterleitung *und* form_post-Seite):
+
+    1. Weiterleitungs-Adresse (``lidl-com…://login/prod?code=…``) – Query oder
+       Fragment, also auch ``#code=…``.
+    2. Eingefügter Seitenquelltext der form_post-Seite (``<input name="code"
+       value="…">``) – der Rückfallweg, wenn das Lesezeichen nicht läuft.
+    3. Der nackte Code allein, falls jemand nur ihn kopiert.
+    """
+    text = (text or "").strip()
+    if not text:
+        raise McAuthError("Es wurde nichts eingefügt.")
+
+    if "://" in text or text.lower().startswith(("http:", "https:")):
+        parsed = urllib.parse.urlparse(text)
+        for part in (parsed.query, parsed.fragment):
+            code = urllib.parse.parse_qs(part).get("code")
+            if code:
+                return code[0]
+
+    match = _HTML_CODE.search(text)
+    if match:
+        return match.group(1)
+
+    if _BARE_CODE.match(text):
+        return text
+
+    raise McAuthError("Darin steckt kein Anmelde-Code ('code=').")
 
 
 async def exchange_code(session: aiohttp.ClientSession, code: str, verifier: str) -> dict:
