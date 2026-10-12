@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import secrets
 import urllib.parse
 from typing import Any
@@ -50,6 +51,8 @@ from .mcbridge.auth import (
 )
 
 CONF_REDIRECT_URL = "redirect_url"
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def _b64url(obj: dict) -> str:
@@ -138,9 +141,11 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         session = async_get_clientsession(self.hass)
         try:
             result = await login_with_code(session, self._code, self._pkce.verifier)
-        except McAuthError:
+        except McAuthError as err:
+            _LOGGER.warning("MC-Finish: Anmeldung fehlgeschlagen (McAuthError): %s", err)
             return self.async_abort(reason="invalid_auth")
-        except Exception:  # noqa: BLE001
+        except Exception as err:  # noqa: BLE001
+            _LOGGER.warning("MC-Finish: Verbindung fehlgeschlagen: %s", err)
             return self.async_abort(reason="cannot_connect")
         return await self._create(result)
 

@@ -82,6 +82,8 @@ class McCallbackView(HomeAssistantView):
         hass: HomeAssistant = request.app["hass"]
         code = request.query.get("code")
         state = request.query.get("state", "")
+        # Diagnose (keine Geheimnisse): nur Vorhandensein, keine Werte.
+        _LOGGER.warning("MC-Callback: has_code=%s has_state=%s", bool(code), bool(state))
 
         if not code or not state:
             return _page("Kein Code empfangen",
@@ -93,20 +95,26 @@ class McCallbackView(HomeAssistantView):
             flow_id = data["fid"]
             token = data.get("s")
         except Exception:  # noqa: BLE001
+            _LOGGER.warning("MC-Callback: state nicht dekodierbar")
             return _page("Ungültiger Status",
                          "Die Rückmeldung konnte nicht gelesen werden. Bitte "
                          "den Login in Home Assistant erneut starten.", ok=False)
 
         tokens = hass.data.get(DOMAIN, {}).get(DATA_FLOW_TOKENS, {})
+        _LOGGER.warning(
+            "MC-Callback: fid=%s token_match=%s offene_vorgaenge=%s",
+            flow_id, tokens.get(flow_id) == token, list(tokens),
+        )
         if tokens.get(flow_id) != token:
             return _page("Abgelaufen oder unbekannt",
                          "Dieser Login-Vorgang ist nicht (mehr) offen. Bitte "
                          "den Login in Home Assistant erneut starten.", ok=False)
 
         try:
-            await hass.config_entries.flow.async_configure(
+            result = await hass.config_entries.flow.async_configure(
                 flow_id, {"code": code}
             )
+            _LOGGER.warning("MC-Callback: async_configure -> %s", result.get("type"))
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Login-Callback fehlgeschlagen: %s", err)
             return _page("Anmeldung fehlgeschlagen",
