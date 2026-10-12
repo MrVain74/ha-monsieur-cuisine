@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Monsieur Cuisine – HA Login-Helfer",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Übergibt nach dem Lidl-Login den Anmelde-Code automatisch an dein Home Assistant. Liest ausschließlich Weiterleitungen auf accounts.lidl.com – keine weiteren Zugriffe.",
   "permissions": ["webRequest"],
   "host_permissions": ["https://accounts.lidl.com/*"],

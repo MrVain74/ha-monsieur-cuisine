@@ -1,16 +1,17 @@
 // Monsieur Cuisine – HA Login-Helfer
 //
-// Fängt die eine Weiterleitung nach dem Lidl-Login ab, die der Browser nicht
-// öffnen kann (die App-Adresse "lidl-com.monsieur-cuisine.Companion://login/prod?code=…"),
-// liest daraus den Anmelde-Code und schickt ihn an die Empfangs-Adresse von
-// Home Assistant. Die HA-Adresse steckt im "state" der Weiterleitung – das
-// Add-on braucht daher KEINE eigene Konfiguration.
+// Fängt nach dem Lidl-Login die Weiterleitung auf die App-Adresse ab
+// ("lidl-com.monsieur-cuisine.Companion://login/prod?code=…") und übergibt den
+// Anmelde-Code an die Empfangs-Adresse von Home Assistant (steckt im "state").
 //
-// Es wird ausschließlich auf Weiterleitungen von accounts.lidl.com reagiert.
-// Es werden keine Zugangsdaten gelesen oder gespeichert – nur der kurzlebige
-// Einmal-Code weitergereicht.
+// Zuverlässiger Weg: Wir lesen den `Location`-Header der 302-Antwort von
+// accounts.lidl.com (onHeadersReceived). Das feuert immer – auch wenn der
+// Browser die App-Adresse danach nicht öffnen kann. onBeforeRedirect bleibt
+// als zusätzliche Absicherung.
+//
+// Nur Weiterleitungen von accounts.lidl.com werden gelesen. Keine Zugangsdaten.
 
-const REDIRECT_PREFIX = "lidl-com.monsieur-cuisine.Companion://login/prod";
+const SCHEME_PREFIX = "lidl-com.monsieur-cuisine.Companion://login/prod";
 
 function b64urlDecode(s) {
   s = s.replace(/-/g, "+").replace(/_/g, "/");
@@ -18,39 +19,62 @@ function b64urlDecode(s) {
   return atob(s);
 }
 
-function onRedirect(details) {
-  const url = details.redirectUrl || "";
-  if (!url.startsWith(REDIRECT_PREFIX)) return;
-
-  const qi = url.indexOf("?");
-  if (qi < 0) return;
-  const params = new URLSearchParams(url.slice(qi + 1));
-  const code = params.get("code");
-  const state = params.get("state");
-  if (!code || !state) return;
-
+function deliver(schemeUrl, tabId, via) {
+  const qi = schemeUrl.indexOf("?");
+  if (qi < 0) return false;
+  const p = new URLSearchParams(schemeUrl.slice(qi + 1));
+  const code = p.get("code");
+  const state = p.get("state");
+  if (!code || !state) {
+    console.log("[MC] Weiterleitung ohne code/state:", schemeUrl.slice(0, 60));
+    return false;
+  }
   let cb;
   try {
     cb = JSON.parse(b64urlDecode(state)).cb;
   } catch (e) {
-    return;
+    console.log("[MC] state nicht lesbar:", e);
+    return false;
   }
-  // Sicherheit: nur an eine normale http(s)-Adresse weiterleiten.
-  if (!cb || !/^https?:\/\//i.test(cb)) return;
-
+  if (!cb || !/^https?:\/\//i.test(cb)) {
+    console.log("[MC] keine gültige HA-Adresse im state:", cb);
+    return false;
+  }
   const target =
-    cb +
-    (cb.includes("?") ? "&" : "?") +
+    cb + (cb.includes("?") ? "&" : "?") +
     "code=" + encodeURIComponent(code) +
     "&state=" + encodeURIComponent(state);
-
-  if (typeof details.tabId === "number" && details.tabId >= 0) {
-    chrome.tabs.update(details.tabId, { url: target });
+  console.log("[MC] Code abgefangen (" + via + ") → sende an HA:", cb, "Tab", tabId);
+  if (typeof tabId === "number" && tabId >= 0) {
+    chrome.tabs.update(tabId, { url: target });
   } else {
     chrome.tabs.create({ url: target });
   }
+  return true;
 }
 
-chrome.webRequest.onBeforeRedirect.addListener(onRedirect, {
-  urls: ["https://accounts.lidl.com/*"],
-});
+// Zuverlässig: Location-Header der 302-Antwort lesen.
+chrome.webRequest.onHeadersReceived.addListener(
+  (d) => {
+    const loc = (d.responseHeaders || []).find(
+      (h) => h.name.toLowerCase() === "location"
+    );
+    if (loc && loc.value && loc.value.indexOf(SCHEME_PREFIX) === 0) {
+      deliver(loc.value, d.tabId, "headers");
+    }
+  },
+  { urls: ["https://accounts.lidl.com/*"] },
+  ["responseHeaders"]
+);
+
+// Absicherung: falls Chrome die Weiterleitung doch als Redirect meldet.
+chrome.webRequest.onBeforeRedirect.addListener(
+  (d) => {
+    if (d.redirectUrl && d.redirectUrl.indexOf(SCHEME_PREFIX) === 0) {
+      deliver(d.redirectUrl, d.tabId, "redirect");
+    }
+  },
+  { urls: ["https://accounts.lidl.com/*"] }
+);
+
+console.log("[MC] Login-Helfer bereit (v0.2.0)");
