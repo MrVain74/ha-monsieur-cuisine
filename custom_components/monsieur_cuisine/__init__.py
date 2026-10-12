@@ -11,6 +11,7 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall, ServiceResponse, SupportsResponse
+from homeassistant.helpers.typing import ConfigType
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -28,11 +29,19 @@ from .const import (
     SERVICE_SEND_RECIPE,
 )
 from .coordinator import McCoordinator
+from .http import McCallbackView
 from .mcbridge import STATUS_DRAFT, build_payload, from_html, from_schema_org
 from .mcbridge.client import JwtAuth, McApiError, McClient
 
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Einmalige Einrichtung: Empfangs-Adresse für den automatischen Login."""
+    hass.data.setdefault(DOMAIN, {})
+    hass.http.register_view(McCallbackView())
+    return True
 
 SEND_SCHEMA = vol.Schema(
     {

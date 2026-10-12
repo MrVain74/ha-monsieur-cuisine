@@ -53,13 +53,19 @@ def new_pkce() -> PkcePair:
                     secrets.token_urlsafe(32), secrets.token_urlsafe(32))
 
 
-def authorize_url(pkce: PkcePair, country: str = "DE", language: str = "de-DE") -> str:
-    """Browser-Link für den Lidl-Login (Nutzer löst dort auch das Captcha)."""
+def authorize_url(pkce: PkcePair, country: str = "DE", language: str = "de-DE",
+                  state: str | None = None) -> str:
+    """Browser-Link für den Lidl-Login (Nutzer löst dort auch das Captcha).
+
+    ``state`` kann überschrieben werden: Beim automatischen Weg (Browser-Helfer)
+    trägt der ``state`` die HA-Empfangsadresse, damit der Helfer den Code dorthin
+    schicken kann. Lidl gibt den ``state`` unverändert in der Weiterleitung zurück.
+    """
     q = {
         "prompt": "login", "response_type": "code", "client_id": CLIENT_ID,
         "redirect_uri": REDIRECT_URI, "scope": SCOPE,
         "code_challenge": pkce.challenge, "code_challenge_method": "S256",
-        "state": pkce.state, "nonce": pkce.nonce,
+        "state": state or pkce.state, "nonce": pkce.nonce,
         "CountryCode": country, "Language": language,
     }
     return f"{ACCOUNTS}/connect/authorize?" + urllib.parse.urlencode(q)

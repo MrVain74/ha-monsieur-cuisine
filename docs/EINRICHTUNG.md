@@ -8,6 +8,9 @@
 - Home Assistant (aktuell), mit [HACS](https://hacs.xyz).
 - Ein **Monsieur-Cuisine-Konto** und einen gekoppelten **Monsieur Cuisine Smart**.
 - Einen **Browser am Computer** für die einmalige Anmeldung.
+- Empfohlen: den kleinen **Browser-Helfer** (siehe `browser-helper/`), dann läuft
+  die Anmeldung vollautomatisch. Ohne Helfer geht es auch – dann einen Schritt
+  von Hand (siehe unten).
 
 ## 1. Installation über HACS (benutzerdefiniertes Repository)
 1. HACS → oben rechts **⋮** → **Benutzerdefinierte Repositorys**.
@@ -20,22 +23,28 @@
 2. Nach **„Monsieur Cuisine"** suchen und auswählen.
 
 ## 3. Bei Lidl anmelden
-Es öffnet sich ein Fenster mit einem Link und einem Eingabefeld.
+Beim Hinzufügen fragt HA, **wie** du dich anmelden willst:
 
-1. Klick auf **„die Lidl-Anmeldung"** (öffnet einen neuen Tab). Melde dich dort an:
-   **E-Mail, Passwort und Captcha** – das machst du selbst.
-2. Direkt nach dem Login wirst du auf eine Adresse weitergeleitet, die mit
-   **`lidl-com.monsieur-cuisine.companion://login/prod?code=…`** beginnt.
-   Dein Browser **kann diese Adresse nicht öffnen** und zeigt eine Fehlerseite oder ein
-   „In App öffnen?"-Fenster – **das ist normal.**
-3. **Kopiere die komplette Adresse** und füge sie in HA in das Feld
-   **„Weiterleitungs-Adresse"** ein. Dann **Bestätigen**.
+### Variante A – Automatisch (empfohlen, mit Browser-Helfer)
+Einmalig den **Browser-Helfer** installieren (Anleitung in `browser-helper/README.md`).
+Danach:
 
-   **Wie komme ich an die Adresse?**
-   - **Meistens:** in der **Adressleiste** des Browsers – anklicken und kopieren.
-   - **Falls die Adressleiste sie nicht zeigt:** vor dem Login die **Entwicklertools**
-     öffnen (F12), Reiter **Netzwerk/Network**, **„Keep log / Protokoll behalten"** an.
-     Nach dem Login den Eintrag **`login/prod?code=…`** anklicken und die **Request-URL** kopieren.
+1. Im HA-Dialog **„Automatisch"** wählen → **Website öffnen**.
+2. Bei Lidl anmelden: **E-Mail, Passwort und Captcha** – das machst du selbst.
+3. Der Helfer übergibt den Anmelde-Code automatisch an HA – der Dialog **schließt
+   sich von allein** und das Gerät ist eingerichtet. Kein Kopieren nötig.
+
+### Variante B – Manuell (ohne Helfer)
+1. Im HA-Dialog **„Manuell"** wählen.
+2. Klick auf **„die Lidl-Anmeldung"** (neuer Tab), anmelden (E-Mail, Passwort, Captcha).
+3. Nach dem Login wirst du auf eine Adresse weitergeleitet, die mit
+   **`lidl-com.monsieur-cuisine.Companion://login/prod?code=…`** beginnt. Der
+   Browser kann sie nicht öffnen (Fehlerseite) – **das ist normal**.
+4. **Kopiere die komplette Adresse** und füge sie in HA in das Feld
+   **„Weiterleitungs-Adresse"** ein → **Bestätigen**.
+
+> Hinweis: Chrome zeigt diese Adresse nicht immer in der Adressleiste. Wenn du
+> sie dort nicht siehst, nimm **Variante A** – der Helfer löst genau das.
 
 Fertig – Home Assistant richtet dein Gerät automatisch ein.
 

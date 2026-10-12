@@ -3,7 +3,19 @@
     "step": {
       "user": {
         "title": "Connect Monsieur Cuisine",
-        "description": "**Unofficial** – not affiliated with Lidl, SilverCrest or Tecpal.\n\n1. Open **[the Lidl sign-in]({login_url})** in a new tab and log in (e-mail, password, captcha – you do this yourself).\n2. You will then be redirected to an address starting with `lidl-com…`. Your browser usually shows an error page there – **this is expected**.\n3. Copy **the full address** (from the address bar) and paste it below.",
+        "description": "**Unofficial** – not affiliated with Lidl, SilverCrest or Tecpal.\n\nHow would you like to sign in?",
+        "menu_options": {
+          "auto": "Automatic (recommended – with browser helper)",
+          "manual": "Manual (paste the address yourself)"
+        }
+      },
+      "auto": {
+        "title": "Sign in with Lidl",
+        "description": "Click **Open website** below and log in to Lidl (e-mail, password, captcha – you do this yourself).\n\nThe small **browser helper** then sends the sign-in code back automatically – this dialog will finish **on its own**.\n\n_No helper installed yet? Cancel here and choose “Manual”._"
+      },
+      "manual": {
+        "title": "Manual sign-in",
+        "description": "1. Open **[the Lidl sign-in]({login_url})** in a new tab and log in (e-mail, password, captcha – you do this yourself).\n2. You will then be redirected to an address starting with `lidl-com…`. Your browser usually shows an error page there – **this is expected**.\n3. Copy **the full address** (from the address bar) and paste it below.",
         "data": { "redirect_url": "Redirect address (starts with lidl-com…)" }
       }
     },
@@ -11,7 +23,12 @@
       "invalid_auth": "Sign-in failed. Is the address complete? The code is only valid briefly – if needed, open the Lidl sign-in above again and paste the fresh address.",
       "cannot_connect": "Could not reach the Monsieur Cuisine cloud. Please try again later."
     },
-    "abort": { "already_configured": "This account is already configured." }
+    "abort": {
+      "already_configured": "This account is already configured.",
+      "invalid_auth": "Sign-in failed. Please start the login again (the code is only valid briefly).",
+      "cannot_connect": "Could not reach the Monsieur Cuisine cloud. Please try again later.",
+      "no_url": "Home Assistant does not know its own URL. Please set one under Settings → System → Network, or use the manual method."
+    }
   },
   "entity": {
     "binary_sensor": { "cloud_connection": { "name": "Cloud connection" } },

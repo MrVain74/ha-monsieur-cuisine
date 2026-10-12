@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+# private Testdaten (eigene Rezepte, Tokens) – nie committen
+local/
+secrets*.json

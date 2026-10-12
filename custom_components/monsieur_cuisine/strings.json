@@ -3,7 +3,19 @@
     "step": {
       "user": {
         "title": "Monsieur Cuisine verbinden",
-        "description": "**Inoffiziell** – keine Verbindung zu Lidl, SilverCrest oder Tecpal.\n\n1. Öffne **[die Lidl-Anmeldung]({login_url})** in einem neuen Tab und melde dich an (E-Mail, Passwort, Captcha – das machst du selbst).\n2. Danach wirst du auf eine Adresse weitergeleitet, die mit `lidl-com…` beginnt. Der Browser zeigt dort meist eine Fehlerseite – **das ist normal**.\n3. Kopiere **die komplette Adresse** (aus der Adressleiste) und füge sie unten ein.",
+        "description": "**Inoffiziell** – keine Verbindung zu Lidl, SilverCrest oder Tecpal.\n\nWie möchtest du dich anmelden?",
+        "menu_options": {
+          "auto": "Automatisch (empfohlen – mit Browser-Helfer)",
+          "manual": "Manuell (Adresse selbst einfügen)"
+        }
+      },
+      "auto": {
+        "title": "Bei Lidl anmelden",
+        "description": "Klick unten auf **Website öffnen** und melde dich bei Lidl an (E-Mail, Passwort, Captcha – das machst du selbst).\n\nDer kleine **Browser-Helfer** schickt den Anmelde-Code danach automatisch zurück – dieser Dialog schließt sich dann **von allein**.\n\n_Noch kein Helfer installiert? Dann brich hier ab und wähle „Manuell“._"
+      },
+      "manual": {
+        "title": "Manuell anmelden",
+        "description": "1. Öffne **[die Lidl-Anmeldung]({login_url})** in einem neuen Tab und melde dich an (E-Mail, Passwort, Captcha – das machst du selbst).\n2. Danach wirst du auf eine Adresse weitergeleitet, die mit `lidl-com…` beginnt. Der Browser zeigt dort meist eine Fehlerseite – **das ist normal**.\n3. Kopiere **die komplette Adresse** (aus der Adressleiste) und füge sie unten ein.",
         "data": { "redirect_url": "Weiterleitungs-Adresse (beginnt mit lidl-com…)" }
       }
     },
@@ -11,7 +23,12 @@
       "invalid_auth": "Anmeldung fehlgeschlagen. Ist die Adresse vollständig? Der Code gilt nur kurz – notfalls die Lidl-Anmeldung oben neu öffnen und erneut einfügen.",
       "cannot_connect": "Verbindung zur Monsieur-Cuisine-Cloud fehlgeschlagen. Bitte später erneut versuchen."
     },
-    "abort": { "already_configured": "Dieses Konto ist bereits eingerichtet." }
+    "abort": {
+      "already_configured": "Dieses Konto ist bereits eingerichtet.",
+      "invalid_auth": "Anmeldung fehlgeschlagen. Bitte den Login erneut starten (der Code gilt nur kurz).",
+      "cannot_connect": "Verbindung zur Monsieur-Cuisine-Cloud fehlgeschlagen. Bitte später erneut versuchen.",
+      "no_url": "Home Assistant kennt seine eigene Adresse nicht. Bitte unter Einstellungen → System → Netzwerk eine URL hinterlegen oder den manuellen Weg nutzen."
+    }
   },
   "entity": {
     "binary_sensor": { "cloud_connection": { "name": "Cloud-Verbindung" } },
