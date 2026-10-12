@@ -170,7 +170,12 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="manual",
             data_schema=vol.Schema({vol.Required(CONF_REDIRECT_URL): str}),
-            description_placeholders={"login_url": authorize_url(self._pkce)},
+            # form_post: nach dem Login steht der Code als verstecktes Feld im
+            # Seitenquelltext – in Chrome zuverlässig kopierbar (anders als die
+            # lidl-com…-Adresse, die Chrome nicht in der Adressleiste zeigt).
+            description_placeholders={
+                "login_url": authorize_url(self._pkce, response_mode="form_post")
+            },
             errors=errors,
         )
 

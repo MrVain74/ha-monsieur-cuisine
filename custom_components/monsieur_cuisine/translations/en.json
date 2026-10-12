@@ -20,9 +20,9 @@
       },
       "manual": {
         "title": "Manual sign-in",
-        "description": "1. Open **[the Lidl sign-in page]({login_url})** in a new tab and sign in (e-mail, password and captcha are up to you).\n2. You are then redirected to an address starting with `lidl-com…`. The browser usually shows an error page – **that is expected**.\n3. Copy **the whole address** from the address bar and paste it below.\n\n_Did “Without any add-on” leave you on a blank page? Then view the page source there (`Ctrl/Cmd`+`U`), copy everything and paste it here – the code will be found inside._",
+        "description": "1. Open **[the Lidl sign-in page]({login_url})** in a new tab and sign in (e-mail, password and captcha are up to you).\n2. Afterwards a **blank or nearly blank page** appears at `accounts.lidl.com` (if a warning “…not secure” shows first, click **Back** once).\n3. On that blank page: **right-click → “View page source”** (or `Ctrl/Cmd`+`U`), **select all** (`Ctrl/Cmd`+`A`) and **copy**.\n4. Paste the copied text below → **Submit**. Home Assistant finds the sign-in code inside it.",
         "data": {
-          "redirect_url": "Redirect address, page source or code"
+          "redirect_url": "Paste page source (address or code also work)"
         }
       }
     },
