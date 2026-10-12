@@ -59,8 +59,12 @@ With `recipe_id` an existing recipe of yours is overwritten.
 
 1. HACS → top right ⋮ → **Custom repositories** → this repo, category *Integration*.
 2. Install “Monsieur Cuisine (unofficial)”, restart Home Assistant.
-3. Settings → Devices & Services → Add integration → *Monsieur Cuisine*.
+3. **Sign-in helper (one-time, recommended):** install the small browser add-on
+   from [`browser-helper/`](browser-helper/) so the Lidl login completes
+   automatically (no copy/paste, no DevTools). Details in its README.
+4. Settings → Devices & Services → Add integration → *Monsieur Cuisine* → **Automatic**.
 
+Without the helper you can still use **Manual** sign-in (paste the redirect address).
 Step-by-step (German): [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
 
 ## Development

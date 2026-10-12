@@ -11,7 +11,7 @@
       },
       "auto": {
         "title": "Bei Lidl anmelden",
-        "description": "Klick unten auf **Website öffnen** und melde dich bei Lidl an (E-Mail, Passwort, Captcha – das machst du selbst).\n\nDer kleine **Browser-Helfer** schickt den Anmelde-Code danach automatisch zurück – dieser Dialog schließt sich dann **von allein**.\n\n_Noch kein Helfer installiert? Dann brich hier ab und wähle „Manuell“._"
+        "description": "**Einmalig nötig:** der kleine **Browser-Helfer**. Er fängt nach dem Login den Anmelde-Code ab und übergibt ihn automatisch an Home Assistant – du musst nichts kopieren.\n\n➡️ **[Browser-Helfer herunterladen & installieren](https://github.com/MrVain74/ha-monsieur-cuisine/tree/main/browser-helper)** (kurze Anleitung dort, ca. 1 Min – nur beim ersten Mal).\n\nDanach unten **Website öffnen**, bei Lidl anmelden (E-Mail, Passwort, Captcha – das machst du selbst). Der Dialog schließt sich dann **von allein**.\n\n_Ohne Helfer: abbrechen und „Manuell“ wählen._"
       },
       "manual": {
         "title": "Manuell anmelden",

@@ -11,7 +11,7 @@
       },
       "auto": {
         "title": "Sign in with Lidl",
-        "description": "Click **Open website** below and log in to Lidl (e-mail, password, captcha – you do this yourself).\n\nThe small **browser helper** then sends the sign-in code back automatically – this dialog will finish **on its own**.\n\n_No helper installed yet? Cancel here and choose “Manual”._"
+        "description": "**Required once:** the small **browser helper**. After login it catches the sign-in code and hands it to Home Assistant automatically – no copying needed.\n\n➡️ **[Download & install the browser helper](https://github.com/MrVain74/ha-monsieur-cuisine/tree/main/browser-helper)** (short guide there, ~1 min – first time only).\n\nThen click **Open website** below and log in to Lidl (e-mail, password, captcha – you do this yourself). This dialog will finish **on its own**.\n\n_No helper? Cancel and choose “Manual”._"
       },
       "manual": {
         "title": "Manual sign-in",
