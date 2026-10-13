@@ -4,6 +4,39 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.4] – 2026-10-13
+### Hinzugefügt
+- **Erneute Anmeldung (Reauth) ohne Löschen.** Wird die gespeicherte Sitzung
+  ungültig (z. B. Passwortwechsel bei Lidl oder längere Pause), wirft der Abruf
+  `ConfigEntryAuthFailed` – HA bietet jetzt einen **„Erneut anmelden"**-Knopf.
+  Der Flow (`async_step_reauth` → `reauth_confirm` → Browser-Helfer-Login)
+  **frischt den bestehenden Eintrag auf** statt einen zweiten anzulegen; Gerät
+  und Einstellungen bleiben. Meldet sich ein **anderes** Konto an, bricht er mit
+  `reauth_account_mismatch` ab. Neue Texte in `strings.json` + de/en.
+- **Config-Entry-Migration (`async_migrate_entry`).** Hebt einen Eintrag beim
+  Versionssprung aufs aktuelle Format, **ohne neue Anmeldung** – die Tokens
+  bleiben erhalten, nur Felder ziehen um. Erster Schritt v1 → v2: `refresh_token`
+  → `lidl_refresh_token`. Die reine Umzugslogik steht HA-frei in `migration.py`
+  (`migrate_data`); ein Downgrade (Eintrag neuer als der Code) wird abgelehnt.
+
+### Hintergrund
+- Damit ist beantwortet, was bis dahin ungetestet war: **Ein Update der
+  Integration erzwingt keine neue Anmeldung.** Die Anmeldung liegt im
+  Config-Eintrag (`.storage`), den ein HACS-Update nicht anfasst; der JWT wird
+  ohnehin automatisch erneuert. Die beiden neuen Bausteine sichern die zwei
+  Restfälle ab: Format-Änderung (Migration) und serverseitig entzogene Sitzung
+  (Reauth).
+
+### Regel
+- `McConfigFlow.VERSION` nie anheben, ohne in `migration.migrate_data` einen
+  Umzug **und** einen Test zu ergänzen. Ein Test wacht darüber, dass
+  `VERSION == migration.CURRENT_VERSION`.
+
+### Tests
+- Neu: `tests/test_migration.py` (v1→v2-Umzug, keine Seiteneffekte, Versions-
+  Gleichheit) und `tests/test_reauth.py` (Hinweis zuerst, External Step,
+  Eintrag-Auffrischung + reload, Konto-Mismatch). Gesamt **123 Tests**.
+
 ## [0.4.3] – 2026-10-13
 ### Dokumentation
 - **Nutzer-Doku von erledigten Entwicklungsthemen bereinigt.** In `README.md`,

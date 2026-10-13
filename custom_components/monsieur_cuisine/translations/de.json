@@ -8,13 +8,19 @@
       "login": {
         "title": "Bei Lidl anmelden",
         "description": "Klick unten auf **Website öffnen** und melde dich bei Lidl an (E-Mail, Passwort und Captcha gibst du selbst ein).\n\nDer Browser-Helfer übergibt den Anmelde-Code danach automatisch – dieser Dialog schließt sich **von allein**."
+      },
+      "reauth_confirm": {
+        "title": "Erneut bei Lidl anmelden",
+        "description": "Die gespeicherte Sitzung gilt nicht mehr (z. B. nach einem Passwortwechsel oder längerer Pause). Eine einmalige neue Anmeldung bei Lidl stellt die Verbindung wieder her – dein Gerät und alle Einstellungen bleiben erhalten.\n\n**Browser-Helfer aktiv?** Dann unten auf **Absenden** – danach öffnet sich die Lidl-Anmeldung."
       }
     },
     "abort": {
       "already_configured": "Dieses Konto ist bereits eingerichtet.",
       "invalid_auth": "Anmeldung fehlgeschlagen. Bitte den Login erneut starten (der Code gilt nur kurz).",
       "cannot_connect": "Verbindung zur Monsieur-Cuisine-Cloud fehlgeschlagen. Bitte später erneut versuchen.",
-      "no_url": "Home Assistant kennt seine eigene Adresse nicht. Bitte unter Einstellungen → System → Netzwerk eine URL hinterlegen."
+      "no_url": "Home Assistant kennt seine eigene Adresse nicht. Bitte unter Einstellungen → System → Netzwerk eine URL hinterlegen.",
+      "reauth_successful": "Erneute Anmeldung erfolgreich – die Verbindung steht wieder.",
+      "reauth_account_mismatch": "Diese Anmeldung gehört zu einem anderen Konto. Bitte mit demselben Konto anmelden, das ursprünglich eingerichtet wurde."
     }
   },
   "entity": {

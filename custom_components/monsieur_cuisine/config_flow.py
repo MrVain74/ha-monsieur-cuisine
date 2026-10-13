@@ -32,7 +32,7 @@ from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.network import NoURLAvailableError, get_url
 
@@ -64,6 +64,9 @@ def _b64url(obj: dict) -> str:
 
 
 class McConfigFlow(ConfigFlow, domain=DOMAIN):
+    # Muss mit migration.CURRENT_VERSION übereinstimmen. Regel: nie anheben,
+    # ohne in migration.migrate_data einen Umzug (und einen Test) zu ergänzen –
+    # sonst erzwingt ein Update eine neue Anmeldung.
     VERSION = 2
 
     def __init__(self) -> None:
@@ -74,6 +77,9 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         self._login_task: asyncio.Task | None = None
         self._login: dict[str, Any] | None = None
         self._login_error: str | None = None
+        # Gesetzt, wenn gerade eine **erneute** Anmeldung läuft (Reauth): dann
+        # wird am Ende dieser Eintrag aufgefrischt statt ein neuer angelegt.
+        self._reauth_entry: ConfigEntry | None = None
 
     # --- Hinweis vor dem Login ------------------------------------------------
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -92,6 +98,37 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is None:
             return self.async_show_form(step_id="user", data_schema=vol.Schema({}))
 
+        return await self.async_step_login()
+
+    # --- Erneute Anmeldung (Reauth) ------------------------------------------
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> ConfigFlowResult:
+        """Startet, wenn die gespeicherte Sitzung nicht mehr gilt.
+
+        HA ruft das auf, sobald beim Abruf ``ConfigEntryAuthFailed`` fällt (der
+        Koordinator wirft es bei ``McAuthError``) – etwa wenn Lidl/Tecpal den
+        Refresh-Token zurückgezogen hat. Wir merken uns den betroffenen Eintrag
+        und zeigen einen kurzen Hinweis; danach läuft dieselbe Anmeldung wie bei
+        der Ersteinrichtung, nur wird am Ende der **bestehende** Eintrag
+        aufgefrischt (siehe ``_complete``).
+        """
+        self._reauth_entry = self.hass.config_entries.async_get_entry(
+            self.context["entry_id"]
+        )
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Hinweis vor der erneuten Anmeldung – wie der Schritt ``user``.
+
+        Auch hier muss die Empfangs-Adresse schon registriert sein, bevor sich
+        die Lidl-Seite öffnet.
+        """
+        ensure_views(self.hass)
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reauth_confirm", data_schema=vol.Schema({})
+            )
         return await self.async_step_login()
 
     # --- Anmeldung über den Browser-Helfer (external step) --------------------
@@ -186,21 +223,36 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         if self._login is None:
             _LOGGER.warning("MC-Finish: kein Anmeldeergebnis vorhanden")
             return self.async_abort(reason="invalid_auth")
-        return await self._create(self._login)
+        return await self._complete(self._login)
 
-    # --- Eintrag anlegen ------------------------------------------------------
-    async def _create(self, result: dict[str, Any]) -> ConfigFlowResult:
+    # --- Eintrag anlegen oder (bei Reauth) auffrischen -----------------------
+    async def _complete(self, result: dict[str, Any]) -> ConfigFlowResult:
         user = result.get("user", {})
-        await self.async_set_unique_id(str(user.get("id")))
+        uid = str(user.get("id"))
+        data = {
+            CONF_JWT: result["jwt"],
+            CONF_USER_ID: user.get("id"),
+            CONF_COMPANION_APP_ID: result["companion_app_id"],
+            CONF_LIDL_REFRESH_TOKEN: result.get("lidl_refresh_token"),
+        }
+
+        # Erneute Anmeldung: den bestehenden Eintrag auffrischen statt einen
+        # zweiten anzulegen. Meldet sich jemand mit einem **anderen** Konto an,
+        # brechen wir ab – sonst würden fremde Tokens in den Eintrag geschrieben.
+        if self._reauth_entry is not None:
+            if self._reauth_entry.unique_id not in (None, uid):
+                return self.async_abort(reason="reauth_account_mismatch")
+            self.hass.config_entries.async_update_entry(
+                self._reauth_entry, data={**self._reauth_entry.data, **data}
+            )
+            await self.hass.config_entries.async_reload(self._reauth_entry.entry_id)
+            return self.async_abort(reason="reauth_successful")
+
+        await self.async_set_unique_id(uid)
         self._abort_if_unique_id_configured()
         return self.async_create_entry(
             title=user.get("displayName") or "Monsieur Cuisine",
-            data={
-                CONF_JWT: result["jwt"],
-                CONF_USER_ID: user.get("id"),
-                CONF_COMPANION_APP_ID: result["companion_app_id"],
-                CONF_LIDL_REFRESH_TOKEN: result.get("lidl_refresh_token"),
-            },
+            data=data,
         )
 
     # --- Aufräumen -----------------------------------------------------------

@@ -4,7 +4,7 @@
 > cloud interface of the Monsieur Cuisine app. May break at any time if the vendor changes things.
 > For your own account only, gentle polling (max. 1 request/second, every 15 minutes).
 
-**Status: Alpha (v0.4.3)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
+**Status: Alpha (v0.4.4)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
 👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) · **Funktionsweise:** [`docs/FUNKTIONSWEISE.md`](docs/FUNKTIONSWEISE.md)
 

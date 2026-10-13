@@ -30,6 +30,7 @@ from .const import (
     EVENT_RECIPE_SENT,
     SERVICE_SEND_RECIPE,
 )
+from .migration import CURRENT_VERSION, migrate_data
 from .coordinator import McAccountCoordinator, McCoordinator, McLiveCoordinator
 from .http import ensure_views
 from .mcbridge import STATUS_DRAFT, build_payload, from_html, from_schema_org
@@ -53,6 +54,29 @@ SEND_SCHEMA = vol.Schema(
         vol.Optional(ATTR_DRY_RUN, default=False): cv.boolean,
     }
 )
+
+
+async def async_migrate_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Config-Eintrag auf das aktuelle Format heben.
+
+    HA ruft das bei jedem Versionssprung des Eintrags auf – entscheidend fürs
+    Update: Ein neuer Code darf das gespeicherte Format ändern, ohne dass sich
+    der Nutzer neu anmelden muss. Die Anmeldung (Tokens) bleibt erhalten; nur
+    die Felder ziehen um (siehe ``migration.migrate_data``).
+    """
+    _LOGGER.debug("MC-Migration: Eintrag Version %s", entry.version)
+    if entry.version > CURRENT_VERSION:
+        # Neuerer Eintrag als dieser Code (Herabstufung) – nicht migrierbar.
+        _LOGGER.warning(
+            "MC-Migration: Eintrag Version %s ist neuer als unterstützt (%s)",
+            entry.version, CURRENT_VERSION,
+        )
+        return False
+    if entry.version < CURRENT_VERSION:
+        neu = migrate_data(entry.version, dict(entry.data))
+        hass.config_entries.async_update_entry(entry, data=neu, version=CURRENT_VERSION)
+        _LOGGER.info("MC-Migration: Eintrag auf Version %s gehoben", CURRENT_VERSION)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -8,13 +8,19 @@
       "login": {
         "title": "Sign in with Lidl",
         "description": "Click **Open website** below and sign in with Lidl (e-mail, password and captcha are up to you).\n\nThe browser helper then hands the sign-in code over automatically – this dialog closes **on its own**."
+      },
+      "reauth_confirm": {
+        "title": "Sign in with Lidl again",
+        "description": "The stored session is no longer valid (e.g. after a password change or a long break). Signing in with Lidl once more restores the connection – your device and all settings stay in place.\n\n**Browser helper active?** Then press **Submit** below – the Lidl sign-in page opens next."
       }
     },
     "abort": {
       "already_configured": "This account is already configured.",
       "invalid_auth": "Sign-in failed. Please start the login again (the code is only valid briefly).",
       "cannot_connect": "Could not reach the Monsieur Cuisine cloud. Please try again later.",
-      "no_url": "Home Assistant does not know its own address. Please set a URL under Settings → System → Network."
+      "no_url": "Home Assistant does not know its own address. Please set a URL under Settings → System → Network.",
+      "reauth_successful": "Re-authentication successful – the connection is back.",
+      "reauth_account_mismatch": "This sign-in belongs to a different account. Please sign in with the same account that was set up originally."
     }
   },
   "entity": {

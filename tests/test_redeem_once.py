@@ -106,7 +106,8 @@ ZAEHLER = Zaehler()
 def _load_config_flow():
     vol = _stub("voluptuous", Schema=lambda *a, **k: None, Required=lambda *a, **k: None)
     _stub("homeassistant")
-    _stub("homeassistant.config_entries", ConfigFlow=FakeConfigFlow, ConfigFlowResult=dict)
+    _stub("homeassistant.config_entries", ConfigFlow=FakeConfigFlow, ConfigFlowResult=dict,
+          ConfigEntry=object)
     _stub("homeassistant.helpers")
     _stub("homeassistant.helpers.aiohttp_client",
           async_get_clientsession=lambda hass: "SESSION")
