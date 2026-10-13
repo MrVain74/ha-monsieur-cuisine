@@ -14,6 +14,9 @@ etwas, das neben der Seite mitlesen darf. Frühere Versuche über ein Lesezeiche
 (``response_mode=form_post``) und über manuelles Einfügen waren in Chrome nicht
 zuverlässig und sind wieder entfallen.
 
+Ablauf: ein kurzer Hinweis-Schritt („läuft der Helfer?"), danach der External
+Step mit der Lidl-Anmeldung, zuletzt ``finish`` für den Eintrag.
+
 Technisch: Authorization Code mit PKCE. Der ``state`` trägt die Flow-ID, die
 HA-Empfangsadresse und ein kurzlebiges Token, damit die Erweiterung weiß, wohin
 sie den Code schicken soll, und damit HA ihn dem richtigen Dialog zuordnet.
@@ -26,6 +29,8 @@ import json
 import logging
 import secrets
 from typing import Any
+
+import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -70,18 +75,33 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         self._login: dict[str, Any] | None = None
         self._login_error: str | None = None
 
-    # --- Anmeldung über den Browser-Helfer (external step) --------------------
+    # --- Hinweis vor dem Login ------------------------------------------------
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        """Erster und einziger Schritt: Lidl-Login im Browser.
+        """Kurzer Hinweis, bevor sich die Lidl-Anmeldung öffnet.
 
-        Wird zweimal durchlaufen: beim Hinzufügen baut er den External Step auf,
-        und später ruft die Empfangs-Adresse ihn mit dem ``code`` wieder auf.
+        Ohne diesen Schritt sprang HA beim Hinzufügen sofort in den External
+        Step und öffnete die Lidl-Seite, bevor der Nutzer überhaupt lesen
+        konnte, dass dafür der Browser-Helfer laufen muss. Der Schritt hat kein
+        Eingabefeld – nur den Hinweis und „Absenden".
         """
         # Empfangs-Adresse schon jetzt registrieren – beim allerersten
         # Hinzufügen gibt es noch keinen Config-Entry, also läuft async_setup
         # noch nicht, und der Callback liefe auf 404.
         ensure_views(self.hass)
 
+        if user_input is None:
+            return self.async_show_form(step_id="user", data_schema=vol.Schema({}))
+
+        return await self.async_step_login()
+
+    # --- Anmeldung über den Browser-Helfer (external step) --------------------
+    async def async_step_login(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Lidl-Login im Browser.
+
+        Wird zweimal durchlaufen: nach dem Hinweis baut er den External Step
+        auf, und später ruft die Empfangs-Adresse ihn mit dem ``code`` wieder
+        auf – HA leitet den Aufruf anhand der ``step_id`` hierher.
+        """
         if self._pkce is None:
             self._pkce = new_pkce()
 
@@ -97,7 +117,7 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         if state is None:
             return self.async_abort(reason="no_url")
         return self.async_external_step(
-            step_id="user", url=authorize_url(self._pkce, state=state)
+            step_id="login", url=authorize_url(self._pkce, state=state)
         )
 
     # --- state mit Flow-ID, HA-Empfangsadresse und Token ---------------------

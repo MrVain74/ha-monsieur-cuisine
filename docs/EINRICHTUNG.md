@@ -37,9 +37,11 @@ Helfers ohne Klick durch.
 
 1. Einmalig den **Browser-Helfer** installieren – Anleitung in
    [`../browser-helper/README.md`](../browser-helper/README.md), etwa eine Minute.
-2. In Home Assistant **Integration hinzufügen → Monsieur Cuisine** → unten
-   **Website öffnen**.
-3. Bei Lidl anmelden: **E-Mail, Passwort und Captcha** gibst du selbst ein.
+2. In Home Assistant **Integration hinzufügen → Monsieur Cuisine**. Es kommt
+   zuerst ein kurzer Hinweis („Browser-Helfer bereit?") – wenn der Helfer läuft,
+   auf **Absenden**.
+3. Jetzt unten auf **Website öffnen** und bei Lidl anmelden: **E-Mail, Passwort
+   und Captcha** gibst du selbst ein.
 4. Der Helfer übergibt den Anmelde-Code automatisch an Home Assistant. Der
    Dialog **schließt sich von allein**, das Gerät ist eingerichtet.
 

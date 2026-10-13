@@ -4,6 +4,37 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.2] – 2026-10-13
+### Behoben
+- **Die Lidl-Anmeldung öffnete sich beim Hinzufügen sofort**, ohne Vorab-Hinweis
+  (Folge des Umbaus in 0.4.0: `async_step_user` gab direkt den External Step
+  zurück). Wer nicht wusste, dass dafür der Browser-Helfer laufen muss, stand
+  vor einer Lidl-Seite, die nichts zurückmeldet.
+
+  Jetzt kommt zuerst ein **einzelner Hinweis-Schritt** ohne Eingabefeld:
+  „Browser-Helfer bereit?" samt Installationslink. Erst nach **Absenden** folgt
+  der External Step mit der Lidl-Anmeldung. Kein Menü – nur dieser eine Hinweis.
+
+### Geändert
+- Der External Step heißt jetzt `login` (`async_step_login`), der Hinweis bleibt
+  `user`. Die Empfangs-Adresse findet den Schritt über die `step_id`, also ohne
+  Änderung am Callback.
+- Texte für beide Schritte in `strings.json` und den Übersetzungen (de + en);
+  der Installationslink des Helfers sitzt jetzt im Hinweis-Schritt, wo er vor
+  der Anmeldung gelesen wird.
+
+### Unverändert
+- Die Doppel-Treiber-Logik aus 0.4.1 (`DATA_FLOW_FINISHING`, `_redeem_once`,
+  Vortritt für den Dialog, `already_configured` als Erfolg) und die
+  Empfangs-Adresse selbst: nicht angetastet.
+
+### Tests
+- Neu in `tests/test_redeem_once.py`: der erste Aufruf muss ein **Formular**
+  liefern und dabei weder einen `state` anlegen noch eine Adresse öffnen; nach
+  dem Absenden kommt der External Step mit `step_id="login"`; der Code läuft
+  über `async_step_login` herein. Gegen 0.4.1 scheitern sie mit
+  `assert 'external' == 'form'`. Gesamt **114 Tests**.
+
 ## [0.4.1] – 2026-10-13
 ### Behoben
 - **Ersteinrichtung zeigte zwei Fehlerdialoge, obwohl sie klappte.** Der Eintrag

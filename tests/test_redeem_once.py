@@ -1,8 +1,8 @@
 """Der Einmal-Code darf genau EINMAL eingelöst werden.
 
-Es gibt nur noch den Weg über den Browser-Helfer: ``async_step_user`` baut den
-External Step auf und wird später von der Empfangs-Adresse mit dem ``code``
-erneut aufgerufen.
+Es gibt nur noch den Weg über den Browser-Helfer: ``async_step_user`` zeigt
+einen Hinweis, ``async_step_login`` baut den External Step auf und wird später
+von der Empfangs-Adresse mit dem ``code`` erneut aufgerufen.
 
 Hintergrund: Den Abschluss-Schritt eines Config-Flows können zwei Treiber
 aufrufen – der noch offene Einrichtungsdialog (HA weckt ihn über
@@ -168,8 +168,9 @@ def test_zweiter_aufruf_loest_nicht_erneut_ein():
     """Der External Step darf den Code nur einmal verbrennen."""
     async def ablauf():
         flow = _neuer_flow()
-        methode = flow.async_step_user
-        await methode(None)                      # External Step aufbauen
+        methode = flow.async_step_login
+        await flow.async_step_user(None)         # Hinweis-Schritt
+        await flow.async_step_user({})           # Absenden -> External Step
         erst = await methode({"code": "CODE123"})
         zweit = await methode({"code": "CODE123"})
         return flow, erst, zweit
@@ -186,10 +187,10 @@ def test_gleichzeitige_treiber_loesen_nur_einmal_ein():
     async def ablauf():
         flow = _neuer_flow()
         ZAEHLER.verzoegerung = 0.05           # Netz-Latenz nachbilden
-        await flow.async_step_user(None)
+        await flow.async_step_user({})
         await asyncio.gather(
-            flow.async_step_user({"code": "CODE123"}),
-            flow.async_step_user({"code": "CODE123"}),
+            flow.async_step_login({"code": "CODE123"}),
+            flow.async_step_login({"code": "CODE123"}),
         )
         return flow
 
@@ -201,8 +202,8 @@ def test_gleichzeitige_treiber_loesen_nur_einmal_ein():
 def test_finish_macht_keinen_netzverkehr_und_legt_eintrag_an():
     async def ablauf():
         flow = _neuer_flow()
-        await flow.async_step_user(None)
-        await flow.async_step_user({"code": "CODE123"})
+        await flow.async_step_user({})
+        await flow.async_step_login({"code": "CODE123"})
         vorher = len(ZAEHLER.aufrufe)
         ergebnis = await flow.async_step_finish()
         return ergebnis, vorher, len(ZAEHLER.aufrufe)
@@ -222,8 +223,8 @@ def test_finish_zweimal_ergibt_genau_einen_eintrag():
     """
     async def ablauf():
         flow = _neuer_flow()
-        await flow.async_step_user(None)
-        await flow.async_step_user({"code": "CODE123"})
+        await flow.async_step_user({})
+        await flow.async_step_login({"code": "CODE123"})
         erst = await flow.async_step_finish()
         try:
             zweit = await flow.async_step_finish()
@@ -242,8 +243,8 @@ def test_finish_beansprucht_den_abschluss():
     """``finish`` markiert sich, damit die Empfangs-Adresse sich heraushält."""
     async def ablauf():
         flow = _neuer_flow()
-        await flow.async_step_user(None)
-        await flow.async_step_user({"code": "CODE123"})
+        await flow.async_step_user({})
+        await flow.async_step_login({"code": "CODE123"})
         vorher = CONST["DATA_FLOW_FINISHING"] in flow.hass.data.get(CONST["DOMAIN"], {})
         await flow.async_step_finish()
         return flow, vorher
@@ -257,8 +258,8 @@ def test_async_remove_raeumt_auf():
     """Bricht der Nutzer ab, dürfen Token und Beanspruchung nicht liegenbleiben."""
     async def ablauf():
         flow = _neuer_flow()
-        await flow.async_step_user(None)
-        await flow.async_step_user({"code": "CODE123"})
+        await flow.async_step_user({})
+        await flow.async_step_login({"code": "CODE123"})
         await flow.async_step_finish()
         flow.async_remove()
         return flow
@@ -274,8 +275,8 @@ def test_fehlgeschlagene_einloesung_wird_gemerkt_und_nicht_wiederholt():
     async def ablauf():
         flow = _neuer_flow()
         ZAEHLER.fehler = McAuthError("Code-Einlösung fehlgeschlagen: 400 invalid_grant")
-        await flow.async_step_user(None)
-        await flow.async_step_user({"code": "CODE123"})
+        await flow.async_step_user({})
+        await flow.async_step_login({"code": "CODE123"})
         return await flow.async_step_finish()
 
     ergebnis = asyncio.run(ablauf())
@@ -287,8 +288,8 @@ def test_netzfehler_meldet_cannot_connect():
     async def ablauf():
         flow = _neuer_flow()
         ZAEHLER.fehler = OSError("Netz weg")
-        await flow.async_step_user(None)
-        await flow.async_step_user({"code": "CODE123"})
+        await flow.async_step_user({})
+        await flow.async_step_login({"code": "CODE123"})
         return await flow.async_step_finish()
 
     assert asyncio.run(ablauf()) == {"type": "abort", "reason": "cannot_connect"}
@@ -301,3 +302,50 @@ def test_finish_ohne_einloesung_bricht_ab():
         return await flow.async_step_finish()
 
     assert asyncio.run(ablauf()) == {"type": "abort", "reason": "invalid_auth"}
+
+
+# --- Hinweis-Schritt vor dem External Step (v0.4.2) -------------------------
+
+
+def test_hinweis_schritt_oeffnet_noch_nichts():
+    """UX-Regression aus v0.4.0: HA sprang sofort in den External Step.
+
+    Der erste Aufruf muss ein Formular zeigen – und dabei weder einen state
+    anlegen noch die Lidl-Seite öffnen.
+    """
+    async def ablauf():
+        flow = _neuer_flow()
+        return flow, await flow.async_step_user(None)
+
+    flow, ergebnis = asyncio.run(ablauf())
+    assert ergebnis["type"] == "form"
+    assert ergebnis["step_id"] == "user"
+    assert "url" not in ergebnis
+    assert flow.hass.data.get(CONST["DOMAIN"], {}).get(CONST["DATA_FLOW_TOKENS"], {}) == {}
+
+
+def test_nach_absenden_kommt_der_external_step():
+    async def ablauf():
+        flow = _neuer_flow()
+        await flow.async_step_user(None)
+        return await flow.async_step_user({})
+
+    ergebnis = asyncio.run(ablauf())
+    assert ergebnis["type"] == "external"
+    # Die step_id muss "login" sein, sonst findet der Code-Rückruf den Schritt nicht.
+    assert ergebnis["step_id"] == "login"
+    assert ergebnis["url"].startswith("https://accounts.lidl.com/connect/authorize")
+
+
+def test_code_geht_an_den_login_schritt():
+    """Die Empfangs-Adresse ruft über die step_id "login" wieder herein."""
+    async def ablauf():
+        flow = _neuer_flow()
+        await flow.async_step_user(None)
+        await flow.async_step_user({})
+        return flow, await flow.async_step_login({"code": "CODE123"})
+
+    flow, ergebnis = asyncio.run(ablauf())
+    assert ergebnis == {"type": "external_done", "step_id": "finish"}
+    assert len(ZAEHLER.aufrufe) == 1
+    assert flow._login is not None
