@@ -23,6 +23,7 @@ from homeassistant.data_entry_flow import FlowResultType, UnknownFlow
 
 from .const import (
     CALLBACK_PATH,
+    DATA_FLOW_FINISHING,
     DATA_FLOW_TOKENS,
     DATA_VIEW_REGISTERED,
     DOMAIN,
@@ -34,6 +35,23 @@ _LOGGER = logging.getLogger(__name__)
 # lässt, bevor sie selbst abschließt (siehe McCallbackView.get).
 _VORTRITT_SCHRITTE = 20
 _VORTRITT_TAKT = 0.1  # Sekunden → zusammen rund 2 s
+
+# Abbruchgründe, die in Wahrheit bedeuten „jemand anderes war schneller".
+# Dem Nutzer darf dafür kein Fehler angezeigt werden.
+_ABBRUCH_IST_ERFOLG = frozenset({"already_configured"})
+
+
+def _abschluss_beansprucht(hass: HomeAssistant, flow_id: str) -> bool:
+    """Hat der Abschluss-Schritt schon jemand anderen (den Dialog) als Treiber?
+
+    Der Config-Flow markiert sich synchron beim Betreten von ``finish``. Das ist
+    das verlässliche Signal – anders als „steht der Flow noch in HAs
+    ``async_progress``": dort verschwindet er erst, nachdem der Eintrag angelegt
+    **und** eingerichtet ist (erster Coordinator-Abruf inklusive). Genau das
+    dauerte länger als unsere Vortrittszeit, weshalb wir in v0.4.0 trotzdem ein
+    zweites Mal losgelaufen sind.
+    """
+    return flow_id in hass.data.get(DOMAIN, {}).get(DATA_FLOW_FINISHING, set())
 
 
 def _flow_offen(hass: HomeAssistant, flow_id: str) -> bool:
@@ -146,13 +164,13 @@ class McCallbackView(HomeAssistantView):
         #    seinen Eintrag, weil der andere den Flow vorher abgebrochen hatte.
         #
         # Also: dem Dialog kurz den Vortritt lassen und nur selbst abschließen,
-        # wenn danach noch etwas offen ist. Die Einlösung selbst ist zusätzlich
+        # wenn er ihn nicht angetreten hat. Die Einlösung selbst ist zusätzlich
         # im Config-Flow gegen Doppelausführung gesichert (``_redeem_once``).
         if result.get("type") is FlowResultType.EXTERNAL_STEP_DONE:
             for _ in range(_VORTRITT_SCHRITTE):
                 await asyncio.sleep(_VORTRITT_TAKT)
-                if not _flow_offen(hass, flow_id):
-                    _LOGGER.warning("MC-Callback: Dialog hat selbst abgeschlossen")
+                if _abschluss_beansprucht(hass, flow_id) or not _flow_offen(hass, flow_id):
+                    _LOGGER.warning("MC-Callback: Dialog hat den Abschluss übernommen")
                     return _page(
                         "Anmeldung abgeschlossen",
                         "Home Assistant hat den Vorgang beendet – das Ergebnis "
@@ -174,9 +192,16 @@ class McCallbackView(HomeAssistantView):
             _LOGGER.warning("MC-Callback: finish -> %s reason=%s",
                             result.get("type"), result.get("reason"))
 
-        # Ergebnis ehrlich zurückmelden – vorher stand hier immer „Angemeldet",
-        # auch wenn der Abschluss in Wahrheit abgebrochen war.
+        # Ergebnis ehrlich zurückmelden – aber „war schon da" ist kein Fehler.
         if result.get("type") is FlowResultType.ABORT:
+            if result.get("reason") in _ABBRUCH_IST_ERFOLG:
+                # Der Dialog ist uns zuvorgekommen und hat den Eintrag angelegt.
+                # Für den Nutzer ist das ein Erfolg, kein Fehler.
+                _LOGGER.warning("MC-Callback: Abschluss lief schon (%s)",
+                                result.get("reason"))
+                return _page("Angemeldet",
+                             "Alles erledigt – du kannst dieses Fenster schließen "
+                             "und zu Home Assistant zurückkehren.")
             return _page("Anmeldung nicht abgeschlossen",
                          f"Home Assistant hat abgebrochen (Grund: "
                          f"{result.get('reason')}). Bitte den Login in Home "

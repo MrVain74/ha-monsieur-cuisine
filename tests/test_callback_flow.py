@@ -134,9 +134,11 @@ def _state(flow_id="flow1", token="tok1", cb="https://ha.example/api/monsieur_cu
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
 
 
-def _get(query, manager, tokens=None):
+def _get(query, manager, tokens=None, beansprucht=None):
     view = VIEWS["McCallbackView"]()
     hass = FakeHass(tokens if tokens is not None else {"flow1": "tok1"}, manager)
+    if beansprucht:
+        hass.data[CONST["DOMAIN"]][CONST["DATA_FLOW_FINISHING"]] = set(beansprucht)
     return asyncio.run(view.get(Request(query, hass)))
 
 
@@ -240,3 +242,77 @@ def test_ohne_dialog_schliesst_der_callback_ab():
     assert manager.finish_ran
     assert len(manager.calls) == 2
     assert "Angemeldet" in response.text
+
+
+# --- Regression v0.4.1: zwei Treiber im Abschluss-Schritt -------------------
+#
+# Fehlerbild in v0.4.0: Die Oberfläche legt den Eintrag an, braucht dafür aber
+# länger als die Vortrittszeit (HA richtet den Eintrag gleich mit ein, erster
+# Coordinator-Abruf inklusive). Solange steht der Flow noch in async_progress –
+# die Empfangs-Adresse hielt ihn deshalb für "niemand kümmert sich" und lief ein
+# zweites Mal los. Ergebnis: Eintrag da, aber zwei Fehlerdialoge
+# (already_configured auf der Callback-Seite, "Invalid flow" im Dialog).
+
+
+def test_dialog_hat_beansprucht_trotz_noch_offenem_flow():
+    """Der eigentliche Fix: Beanspruchung zählt, nicht "steht noch in progress"."""
+    manager = FakeFlowManager({"type": FlowResultType.CREATE_ENTRY, "title": "MC"})
+    manager.flow_open = True            # Einrichtung läuft noch → Flow "offen"
+
+    response = _get({"code": "CODE123", "state": _state()}, manager,
+                    beansprucht={"flow1"})
+
+    assert manager.calls == [{"code": "CODE123"}], \
+        "bei beanspruchtem Abschluss darf kein zweiter async_configure kommen"
+    assert not manager.finish_ran
+    assert response.status == 200
+    assert "fehlgeschlagen" not in response.text
+    assert "nicht abgeschlossen" not in response.text
+
+
+def test_beanspruchung_mitten_in_der_vortrittszeit():
+    """Die Oberfläche tritt erst während des Wartens an – auch dann kein Fehler."""
+    manager = FakeFlowManager({"type": FlowResultType.CREATE_ENTRY, "title": "MC"})
+    manager.flow_open = True
+
+    async def ablauf():
+        view = VIEWS["McCallbackView"]()
+        hass = FakeHass({"flow1": "tok1"}, manager)
+        hass.data[CONST["DOMAIN"]][CONST["DATA_FLOW_FINISHING"]] = set()
+
+        async def oberflaeche():
+            await asyncio.sleep(0)      # erst einen Schleifendurchlauf später
+            hass.data[CONST["DOMAIN"]][CONST["DATA_FLOW_FINISHING"]].add("flow1")
+
+        aufgabe = asyncio.ensure_future(oberflaeche())
+        antwort = await view.get(Request({"code": "CODE123", "state": _state()}, hass))
+        await aufgabe
+        return antwort
+
+    response = asyncio.run(ablauf())
+    assert manager.calls == [{"code": "CODE123"}]
+    assert response.status == 200
+    assert "nicht abgeschlossen" not in response.text
+
+
+def test_already_configured_ist_kein_fehler():
+    """Kommt die Oberfläche uns zuvor, ist das für den Nutzer ein Erfolg."""
+    manager = FakeFlowManager({"type": FlowResultType.ABORT,
+                               "reason": "already_configured"})
+    response = _get({"code": "CODE123", "state": _state()}, manager)
+
+    assert manager.finish_ran                      # wir sind gelaufen …
+    assert response.status == 200                  # … aber ohne Fehlerseite
+    assert "Angemeldet" in response.text
+    assert "nicht abgeschlossen" not in response.text
+    assert "already_configured" not in response.text
+
+
+def test_echter_abbruch_bleibt_ein_fehler():
+    """Nur already_configured gilt als Erfolg – invalid_auth nicht."""
+    manager = FakeFlowManager({"type": FlowResultType.ABORT, "reason": "invalid_auth"})
+    response = _get({"code": "CODE123", "state": _state()}, manager)
+
+    assert response.status == 400
+    assert "nicht abgeschlossen" in response.text
+    assert "invalid_auth" in response.text

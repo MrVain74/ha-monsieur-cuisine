@@ -33,6 +33,7 @@ from homeassistant.helpers.network import NoURLAvailableError, get_url
 
 from .const import (
     CALLBACK_PATH,
+    DATA_FLOW_FINISHING,
     CONF_COMPANION_APP_ID,
     CONF_JWT,
     CONF_LIDL_REFRESH_TOKEN,
@@ -148,6 +149,17 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         ``_redeem_once``). Dieser Schritt hier kann von zwei Seiten aufgerufen
         werden; er muss deshalb billig und wiederholbar sein.
         """
+        # Diesen Schritt beanspruchen – **synchron**, vor dem ersten await.
+        # Daran erkennt die Empfangs-Adresse, dass der Dialog den Abschluss
+        # schon übernommen hat, und hält sich heraus. Ohne diese Markierung
+        # sahen beide Treiber den Flow noch als "offen" (HA entfernt ihn erst,
+        # nachdem der Eintrag angelegt UND eingerichtet ist) und liefen
+        # gleichzeitig los – Ergebnis: ein Eintrag plus ein
+        # already_configured-Dialog.
+        self.hass.data.setdefault(DOMAIN, {}).setdefault(
+            DATA_FLOW_FINISHING, set()
+        ).add(self.flow_id)
+
         self.hass.data.get(DOMAIN, {}).get(DATA_FLOW_TOKENS, {}).pop(self.flow_id, None)
         if self._login_error is not None:
             return self.async_abort(reason=self._login_error)
@@ -170,3 +182,14 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_LIDL_REFRESH_TOKEN: result.get("lidl_refresh_token"),
             },
         )
+
+    # --- Aufräumen -----------------------------------------------------------
+    def async_remove(self) -> None:
+        """Spuren des Vorgangs entfernen, wenn HA den Flow verwirft.
+
+        Greift auch, wenn der Nutzer den Dialog abbricht – sonst blieben Token
+        und Beanspruchung in ``hass.data`` liegen.
+        """
+        daten = self.hass.data.get(DOMAIN, {})
+        daten.get(DATA_FLOW_TOKENS, {}).pop(self.flow_id, None)
+        daten.get(DATA_FLOW_FINISHING, set()).discard(self.flow_id)

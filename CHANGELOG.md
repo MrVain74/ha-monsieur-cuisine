@@ -4,6 +4,49 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.1] – 2026-10-13
+### Behoben
+- **Ersteinrichtung zeigte zwei Fehlerdialoge, obwohl sie klappte.** Der Eintrag
+  wurde angelegt, danach erschienen „Invalid flow specified" auf der
+  Integrationsseite und „Anmeldung nicht abgeschlossen (already_configured)" auf
+  der Callback-Seite.
+
+  Ursache war **nicht**, dass die „ein Treiber"-Logik gefehlt hätte – sie war da,
+  aber ihr Signal war unzuverlässig. Die Empfangs-Adresse fragte „steht der Flow
+  noch in HAs `async_progress`?". HA entfernt ihn dort aber erst, **nachdem** der
+  Eintrag angelegt **und eingerichtet** ist (erster Coordinator-Abruf übers Netz
+  inklusive). Das dauert länger als die zwei Sekunden Vortritt – die
+  Empfangs-Adresse hielt den Dialog für untätig und lief ein zweites Mal los.
+  Der zweite Durchlauf brach mit `already_configured` ab (Fehlerseite) und
+  entfernte dabei den Flow, worauf der noch laufende Aufruf der Oberfläche in
+  `UnknownFlow` lief („Invalid flow specified").
+
+  Zwei Änderungen:
+  * `async_step_finish` **beansprucht** den Abschluss jetzt synchron beim
+    Betreten (`DATA_FLOW_FINISHING` in `hass.data`). Die Empfangs-Adresse wartet
+    auf diese Markierung statt auf `async_progress` und hält sich heraus, sobald
+    der Dialog angetreten ist – im Normalfall nach Millisekunden.
+  * `already_configured` gilt auf der Callback-Seite als **Erfolg**, nicht als
+    Fehler. Es bedeutet genau das: jemand anderes war schneller. Echte Abbrüche
+    (`invalid_auth`, `cannot_connect`) bleiben Fehler.
+- `McConfigFlow.async_remove()` räumt Token und Beanspruchung auf, wenn HA den
+  Flow verwirft – etwa wenn der Nutzer den Dialog abbricht.
+
+### Tests
+- `tests/test_callback_flow.py`: vier neue Fälle, darunter die Reproduktion
+  (Dialog hat beansprucht, Flow steht aber noch in `async_progress` → kein
+  zweiter Aufruf, keine Fehlerseite) und die Beanspruchung mitten in der
+  Vortrittszeit. Gegen v0.4.0 scheitern sie mit `assert 400 == 200`.
+- `tests/test_redeem_once.py`: Doppel-Aufruf von `finish` ergibt **genau einen**
+  Eintrag (Unique-ID-Schutz von HA im Testdoppel nachgebildet), die
+  Beanspruchung wird gesetzt, `async_remove` räumt auf. Gesamt **111 Tests**.
+
+### Bekannte Restunschärfe
+- Träte die Oberfläche erst **nach** Ablauf der Vortrittszeit an (also später als
+  zwei Sekunden), könnte sie weiterhin als Zweite in den Abschluss laufen und
+  einen Hinweis zeigen. Im Normalfall meldet sie sich nach Millisekunden; diese
+  Lücke lässt sich ohne Eingriff in HAs Flow-Verwaltung nicht ganz schließen.
+
 ## [0.4.0] – 2026-10-13
 ### Geändert – spürbar
 - **Nur noch ein Anmeldeweg: der Browser-Helfer.** Das Auswahlmenü beim

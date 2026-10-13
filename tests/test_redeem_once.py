@@ -28,8 +28,24 @@ class McAuthError(Exception):
     pass
 
 
+class AbortFlow(Exception):
+    """Wie homeassistant.data_entry_flow.AbortFlow."""
+
+    def __init__(self, reason):
+        super().__init__(reason)
+        self.reason = reason
+
+
 class FakeConfigFlow:
-    """Minimale Nachbildung der HA-Basisklasse ConfigFlow."""
+    """Minimale Nachbildung der HA-Basisklasse ConfigFlow.
+
+    Bildet auch den Unique-ID-Schutz nach: ein zweiter Eintrag mit derselben
+    Unique-ID wird wie in HA mit ``already_configured`` abgewiesen. Nur so
+    laesst sich pruefen, dass ein Doppel-Aufruf genau EINEN Eintrag ergibt.
+    """
+
+    # Von den Tests zwischen den Durchlaeufen geleert.
+    angelegt: list = []
 
     def __init_subclass__(cls, **kwargs):
         pass
@@ -47,13 +63,15 @@ class FakeConfigFlow:
         return {"type": "abort", "reason": reason}
 
     def async_create_entry(self, *, title, data):
+        FakeConfigFlow.angelegt.append(self.unique_id)
         return {"type": "create_entry", "title": title, "data": data}
 
     async def async_set_unique_id(self, unique_id):
         self.unique_id = unique_id
 
     def _abort_if_unique_id_configured(self):
-        return None
+        if self.unique_id in FakeConfigFlow.angelegt:
+            raise AbortFlow("already_configured")
 
 
 def _stub(name, **attrs):
@@ -143,6 +161,7 @@ def _zaehler_zuruecksetzen():
     ZAEHLER.aufrufe.clear()
     ZAEHLER.fehler = None
     ZAEHLER.verzoegerung = 0
+    FakeConfigFlow.angelegt.clear()
 
 
 def test_zweiter_aufruf_loest_nicht_erneut_ein():
@@ -195,17 +214,59 @@ def test_finish_macht_keinen_netzverkehr_und_legt_eintrag_an():
     assert ergebnis["data"][CONST["CONF_JWT"]] == "JWT"
 
 
-def test_finish_zweimal_loest_nichts_erneut_aus():
-    """Rufen beide Treiber finish auf, bleibt es bei einer Einlösung."""
+def test_finish_zweimal_ergibt_genau_einen_eintrag():
+    """Der Fehler aus v0.4.0: zwei Treiber im Abschluss-Schritt.
+
+    Dann darf der Code nur einmal eingelöst werden UND es darf nur ein Eintrag
+    entstehen. Der zweite Aufruf läuft wie in HA in ``already_configured``.
+    """
     async def ablauf():
         flow = _neuer_flow()
         await flow.async_step_user(None)
         await flow.async_step_user({"code": "CODE123"})
-        return await flow.async_step_finish(), await flow.async_step_finish()
+        erst = await flow.async_step_finish()
+        try:
+            zweit = await flow.async_step_finish()
+        except AbortFlow as err:
+            zweit = {"type": "abort", "reason": err.reason}
+        return flow, erst, zweit
 
-    erst, zweit = asyncio.run(ablauf())
-    assert len(ZAEHLER.aufrufe) == 1
-    assert erst["type"] == zweit["type"] == "create_entry"
+    flow, erst, zweit = asyncio.run(ablauf())
+    assert len(ZAEHLER.aufrufe) == 1, "Code mehrfach eingelöst"
+    assert FakeConfigFlow.angelegt == ["42"], "es muss genau ein Eintrag entstehen"
+    assert erst["type"] == "create_entry"
+    assert zweit == {"type": "abort", "reason": "already_configured"}
+
+
+def test_finish_beansprucht_den_abschluss():
+    """``finish`` markiert sich, damit die Empfangs-Adresse sich heraushält."""
+    async def ablauf():
+        flow = _neuer_flow()
+        await flow.async_step_user(None)
+        await flow.async_step_user({"code": "CODE123"})
+        vorher = CONST["DATA_FLOW_FINISHING"] in flow.hass.data.get(CONST["DOMAIN"], {})
+        await flow.async_step_finish()
+        return flow, vorher
+
+    flow, vorher = asyncio.run(ablauf())
+    assert vorher is False, "vor finish darf nichts beansprucht sein"
+    assert "flow1" in flow.hass.data[CONST["DOMAIN"]][CONST["DATA_FLOW_FINISHING"]]
+
+
+def test_async_remove_raeumt_auf():
+    """Bricht der Nutzer ab, dürfen Token und Beanspruchung nicht liegenbleiben."""
+    async def ablauf():
+        flow = _neuer_flow()
+        await flow.async_step_user(None)
+        await flow.async_step_user({"code": "CODE123"})
+        await flow.async_step_finish()
+        flow.async_remove()
+        return flow
+
+    flow = asyncio.run(ablauf())
+    daten = flow.hass.data[CONST["DOMAIN"]]
+    assert "flow1" not in daten[CONST["DATA_FLOW_FINISHING"]]
+    assert "flow1" not in daten.get(CONST["DATA_FLOW_TOKENS"], {})
 
 
 def test_fehlgeschlagene_einloesung_wird_gemerkt_und_nicht_wiederholt():
