@@ -445,3 +445,16 @@ def test_byte19_schlaegt_cookmode_124():
                        json.dumps({"command": 1, "cookMode": 124, "commandType": "RUNNING"}))
     assert st.device_mode == "kneten"      # aus Byte 19
     assert st.cook_mode is None            # 124 steht in keiner Tabelle
+
+
+def test_verstrichen_wird_abgeleitet_wenn_runningtime_fehlt():
+    """Fix: beim Countdown ohne runningTime wird verstrichen = gesamt - rest."""
+    st = decode_extra_info(json.dumps({
+        "command": 1,
+        "isUpwardTimer": False,
+        "remainingTime": 202000,   # ms
+        "totalTime": 332000,       # ms
+    }))
+    assert st.remaining_seconds == 202
+    assert st.total_seconds == 332
+    assert st.elapsed_seconds == 130   # 332 - 202, nicht die Restzeit

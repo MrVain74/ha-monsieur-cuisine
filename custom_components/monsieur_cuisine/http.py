@@ -110,7 +110,7 @@ class McCallbackView(HomeAssistantView):
         code = request.query.get("code")
         state = request.query.get("state", "")
         # Diagnose (keine Geheimnisse): nur Vorhandensein, keine Werte.
-        _LOGGER.warning("MC-Callback: has_code=%s has_state=%s", bool(code), bool(state))
+        _LOGGER.debug("MC-Callback: has_code=%s has_state=%s", bool(code), bool(state))
 
         if not code or not state:
             return _page("Kein Code empfangen",
@@ -141,7 +141,7 @@ class McCallbackView(HomeAssistantView):
             result = await hass.config_entries.flow.async_configure(
                 flow_id, {"code": code}
             )
-            _LOGGER.warning("MC-Callback: async_configure -> %s", result.get("type"))
+            _LOGGER.debug("MC-Callback: async_configure -> %s", result.get("type"))
         except Exception as err:  # noqa: BLE001
             _LOGGER.warning("Login-Callback fehlgeschlagen: %s", err)
             return _page("Anmeldung fehlgeschlagen",
@@ -170,7 +170,7 @@ class McCallbackView(HomeAssistantView):
             for _ in range(_VORTRITT_SCHRITTE):
                 await asyncio.sleep(_VORTRITT_TAKT)
                 if _abschluss_beansprucht(hass, flow_id) or not _flow_offen(hass, flow_id):
-                    _LOGGER.warning("MC-Callback: Dialog hat den Abschluss übernommen")
+                    _LOGGER.debug("MC-Callback: Dialog hat den Abschluss übernommen")
                     return _page(
                         "Anmeldung abgeschlossen",
                         "Home Assistant hat den Vorgang beendet – das Ergebnis "
@@ -180,7 +180,7 @@ class McCallbackView(HomeAssistantView):
                 result = await hass.config_entries.flow.async_configure(flow_id)
             except UnknownFlow:
                 # Die Oberfläche war schneller und hat schon abgeschlossen.
-                _LOGGER.warning("MC-Callback: Flow war bereits abgeschlossen")
+                _LOGGER.debug("MC-Callback: Flow war bereits abgeschlossen")
                 return _page("Angemeldet",
                              "Alles erledigt – du kannst dieses Fenster schließen "
                              "und zu Home Assistant zurückkehren.")
@@ -189,16 +189,16 @@ class McCallbackView(HomeAssistantView):
                 return _page("Anmeldung fehlgeschlagen",
                              "Home Assistant konnte die Anmeldung nicht abschließen. "
                              "Bitte den Login erneut starten.", ok=False)
-            _LOGGER.warning("MC-Callback: finish -> %s reason=%s",
-                            result.get("type"), result.get("reason"))
+            _LOGGER.debug("MC-Callback: finish -> %s reason=%s",
+                          result.get("type"), result.get("reason"))
 
         # Ergebnis ehrlich zurückmelden – aber „war schon da" ist kein Fehler.
         if result.get("type") is FlowResultType.ABORT:
             if result.get("reason") in _ABBRUCH_IST_ERFOLG:
                 # Der Dialog ist uns zuvorgekommen und hat den Eintrag angelegt.
                 # Für den Nutzer ist das ein Erfolg, kein Fehler.
-                _LOGGER.warning("MC-Callback: Abschluss lief schon (%s)",
-                                result.get("reason"))
+                _LOGGER.debug("MC-Callback: Abschluss lief schon (%s)",
+                              result.get("reason"))
                 return _page("Angemeldet",
                              "Alles erledigt – du kannst dieses Fenster schließen "
                              "und zu Home Assistant zurückkehren.")

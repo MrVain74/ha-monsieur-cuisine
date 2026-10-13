@@ -1,0 +1,99 @@
+blueprint:
+  name: Monsieur Cuisine – Koch-Benachrichtigungen
+  description: >
+    Schickt eine Push-Mitteilung, wenn ein Kochschritt fertig ist und/oder wenn
+    das Rezept bzw. der Kochvorgang fertig ist. Nutzt die Entitäten der
+    (inoffiziellen) Monsieur-Cuisine-Integration. Den Schritt-Text gibt es, sobald
+    er verfügbar ist – sonst meldet es die Schritt-Nummer.
+  domain: automation
+  input:
+    kochzustand:
+      name: Kochzustand-Sensor
+      description: Der Sensor „Kochzustand" des Monsieur-Cuisine-Geräts.
+      selector:
+        entity:
+          integration: monsieur_cuisine
+          domain: sensor
+    rezept:
+      name: Rezept-Sensor (optional)
+      description: Für den Rezeptnamen in der Meldung.
+      default: ""
+      selector:
+        entity:
+          integration: monsieur_cuisine
+          domain: sensor
+    schritt:
+      name: Schritt-Sensor (optional)
+      description: Für die Schritt-Nummer/-Text in der Meldung.
+      default: ""
+      selector:
+        entity:
+          integration: monsieur_cuisine
+          domain: sensor
+    dienst:
+      name: Benachrichtigungsdienst
+      description: 'z. B. notify.mobile_app_dein_handy (ohne Anführungszeichen).'
+      selector:
+        text: {}
+    bei_schritt:
+      name: Bei jedem fertigen Schritt melden
+      default: true
+      selector:
+        boolean: {}
+    bei_fertig:
+      name: Bei fertigem Rezept/Vorgang melden
+      default: true
+      selector:
+        boolean: {}
+
+mode: queued
+max: 10
+
+variables:
+  v_rezept: !input rezept
+  v_schritt: !input schritt
+  v_dienst: !input dienst
+  v_bei_schritt: !input bei_schritt
+  v_bei_fertig: !input bei_fertig
+
+triggers:
+  - trigger: state
+    entity_id: !input kochzustand
+    to:
+      - step_done
+      - done
+      - recipe_done
+
+actions:
+  - choose:
+      # Ein Schritt ist fertig (Rezept läuft weiter)
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state == 'step_done' and (v_bei_schritt | bool) }}"
+        sequence:
+          - service: "{{ v_dienst }}"
+            data:
+              title: >-
+                {{ states(v_rezept) if v_rezept and states(v_rezept) not in ['unknown','unavailable',''] else 'Monsieur Cuisine' }}
+              message: >-
+                {% set nr = states(v_schritt) if v_schritt else '' %}
+                {% if nr not in ['', 'unknown', 'unavailable'] %}
+                Schritt {{ nr }} fertig.
+                {% else %}
+                Ein Schritt ist fertig.
+                {% endif %}
+      # Rezept bzw. Kochvorgang komplett fertig
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['done','recipe_done'] and (v_bei_fertig | bool) }}"
+        sequence:
+          - service: "{{ v_dienst }}"
+            data:
+              title: "Monsieur Cuisine"
+              message: >-
+                {% set r = states(v_rezept) if v_rezept else '' %}
+                {% if r not in ['', 'unknown', 'unavailable'] %}
+                „{{ r }}" ist fertig. 🎉
+                {% else %}
+                Fertig – der Kochvorgang ist abgeschlossen. 🎉
+                {% endif %}

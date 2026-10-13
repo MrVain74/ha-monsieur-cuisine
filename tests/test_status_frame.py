@@ -56,7 +56,8 @@ def test_voller_lauf_wird_korrekt_dekodiert():
     assert s.speed_raw == 6 and s.speed == 3.0
     assert s.direction == "rechts"
     assert s.is_countdown is True
-    assert s.remaining_seconds == 297 and s.elapsed_seconds is None
+    # „verstrichen" wird beim Countdown aus Gesamt − Rest abgeleitet (300−297).
+    assert s.remaining_seconds == 297 and s.elapsed_seconds == 3
     assert s.total_seconds == 300
     assert s.lid_closed is True
 

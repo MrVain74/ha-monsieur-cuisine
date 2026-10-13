@@ -208,6 +208,11 @@ def decode_main(main_hex: str) -> DeviceLiveStatus:
     if (v := tags.get(TAG_SET_TIME)) is not None and len(v) >= 2:
         st.total_seconds = _u(v[0:2])
 
+    # Verstrichene Zeit beim Countdown ableiten, falls nur die Restzeit kommt.
+    if (st.elapsed_seconds is None and st.total_seconds is not None
+            and st.remaining_seconds is not None):
+        st.elapsed_seconds = max(st.total_seconds - st.remaining_seconds, 0)
+
     if (v := tags.get(TAG_LID_STATE)) is not None and len(v) >= 1:
         st.lid_closed = v[0] == 1
 
@@ -382,6 +387,11 @@ def decode_extra_info(extra_info: str) -> DeviceLiveStatus:
         st.tick_seconds = st.elapsed_seconds
     elif st.remaining_seconds is not None:
         st.tick_seconds = st.remaining_seconds
+    # Verstrichene Zeit ableiten, wenn der Dienst sie nicht mitschickt
+    # (beim Countdown kam sonst fälschlich die Restzeit heraus).
+    if (st.elapsed_seconds is None and st.total_seconds is not None
+            and st.remaining_seconds is not None):
+        st.elapsed_seconds = max(st.total_seconds - st.remaining_seconds, 0)
 
     # Die App deutet die Kochdaten nur bei command == 1 (fe/c.java). Wir
     # verwerfen nichts, vermerken es aber – sonst rätselt man im Log.

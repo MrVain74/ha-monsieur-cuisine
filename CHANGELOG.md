@@ -4,6 +4,31 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.8] – 2026-10-13
+### Behoben
+- **„verstrichen"-Attribut der Restzeit.** Beim Countdown zeigte es die Restzeit
+  statt der verstrichenen Zeit. Jetzt wird es aus **Gesamt − Rest** abgeleitet,
+  wenn der Dienst keine verstrichene Zeit mitschickt (MC3.0 und MC0.5).
+
+### Geändert
+- **Diagnose-Logzeilen (`MC-…`) auf `debug` gesenkt**, soweit sie Routine sind
+  (Callback-Ablauf, „Einloesung erfolgreich"). Echte Fehler bleiben `warning`.
+  Das Log ist im Normalbetrieb damit ruhig.
+
+### HACS-Vorbereitung
+- **`hacs.json`** im Repo-Root (Anzeigename, README-Anzeige).
+- **GitHub-Workflows** `.github/workflows/`: HACS-Action + hassfest (Validierung)
+  und eine Test-CI (pytest).
+
+### Neu
+- **Blueprint** `blueprints/automation/monsieur_cuisine/koch_benachrichtigung.yaml`:
+  Push-Mitteilung bei fertigem Schritt (`step_done`) und/oder fertigem Rezept/
+  Vorgang (`done`/`recipe_done`), Ziel-Dienst und Umfang wählbar.
+
+### Tests
+- `tests/test_status_frame.py` + `tests/test_live_status.py`: „verstrichen"-
+  Ableitung für TLV und MC3.0. Gesamt **146 Tests**.
+
 ## [0.4.7] – 2026-10-13
 ### Dokumentation
 - **README und `FUNKTIONSWEISE.md` an die v0.4.6-Entitäten angepasst.** Die

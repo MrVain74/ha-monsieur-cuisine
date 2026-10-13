@@ -196,7 +196,7 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
             self._login_error = "cannot_connect"
             _LOGGER.warning("MC-Einloesung: Verbindung fehlgeschlagen: %s", err)
         else:
-            _LOGGER.warning("MC-Einloesung: erfolgreich")
+            _LOGGER.debug("MC-Einloesung: erfolgreich")
 
     # --- Abschluss ------------------------------------------------------------
     async def async_step_finish(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
