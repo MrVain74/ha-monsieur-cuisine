@@ -4,9 +4,9 @@
 > cloud interface of the Monsieur Cuisine app. May break at any time if the vendor changes things.
 > For your own account only, gentle polling (max. 1 request/second, every 15 minutes).
 
-**Status: Alpha (v0.3)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
+**Status: Alpha (v0.3.8)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
-👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md)
+👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) · **Funktionsweise:** [`docs/FUNKTIONSWEISE.md`](docs/FUNKTIONSWEISE.md)
 
 ## What it does
 
@@ -17,9 +17,31 @@
 | Sensor *Own recipes* | ✅ |
 | Diagnostic *Cloud connection* (device currently connected to the cloud) | ✅ |
 | Sign-in (Lidl login directly in Home Assistant) | ✅ setup dialog |
-| **Live cooking status** (state, target temperature, speed, remaining time) | ✅ via the cloud (gRPC), decoded – for the MC Smart; sensors in progress |
+| **Live cooking status** (cooking state, target temperature, speed, remaining time, lid, error) | ✅ via the cloud (gRPC push), decoded – for the MC Smart |
+| **Shopping list** as a to-do list, **weekly planner** as a calendar | ✅ read-only (ticking/adding still to come) |
 | Save recipe as “private” (shows up on the device) | ⏳ needs image upload – draft for now, add the picture on the website |
-| Shopping list as a to-do list, weekly planner as a calendar | ⏳ planned |
+
+## Entities
+
+Set up on the device *Monsieur Cuisine*:
+
+- **Sensors** (live while cooking): cooking state, current temperature, target temperature, speed, remaining time, error code (diagnostic). Live values are available on the MC Smart; while the device is off they read *unavailable*.
+- **Binary sensors**: lid, cloud connection (diagnostic).
+- **Sensor** *Own recipes*: number of your own recipes.
+- **To-do list** *Shopping list* and **calendar** *Weekly planner* from your account (read-only for now).
+
+## Supported models
+
+Only two Monsieur Cuisine models expose a live status over the cloud and are covered here:
+
+| Model | Name | Live status |
+|---|---|---|
+| **MC3.0** | MC Smart | ✅ tested |
+| **MC0.5** | MC Compact | ✅ format decoded, untested |
+| MC2.0 | MC Connect | – not networked |
+| MC1.1 | MC Plus | – not networked |
+
+This integration **only reads** status and account data and writes recipes to your own account. It never sends control commands to the device.
 
 ## Example
 

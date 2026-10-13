@@ -4,6 +4,16 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.3.9] – 2026-10-13
+### Dokumentation
+- README aktualisiert: Live-Status-Sensoren sowie Einkaufsliste/Wochenplaner
+  sind **erledigt** (vorher „geplant"); Entitätenliste und Tabelle der
+  unterstützten Modelle ergänzt; Hinweis, dass die Integration nur liest und
+  keine Steuerbefehle sendet.
+- Neu: `docs/FUNKTIONSWEISE.md` – wie die Integration arbeitet (Modell-Abdeckung,
+  Live-Status über gRPC, Einkaufsliste/Kalender, Anmeldung, Rezepte, Grenzen),
+  ohne interne Details des dekompilierten App-Codes.
+
 ## [0.3.8] – 2026-10-13
 ### Behoben
 - **`extraInfo` wurde beim MC3.0 nicht ausgewertet.** Seit 0.3.5 las
