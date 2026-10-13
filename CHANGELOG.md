@@ -4,6 +4,13 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.3.7] – 2026-10-13
+### Geändert
+- Einkaufsliste und Wochenplaner hängen jetzt am Monsieur-Cuisine-Gerät statt
+  frei zu stehen. Dadurch heißen sie eindeutig „Monsieur Cuisine Einkaufsliste"
+  bzw. „… Wochenplaner" (vorher bloß „Einkaufsliste"/„Wochenplaner", was mit
+  anderen Listen kollidierte) und erscheinen auf der Gerätekarte.
+
 ## [0.3.6] – 2026-10-13
 ### Neu
 - **Einkaufsliste als Aufgabenliste (`todo`).** Zeigt die Konto-Einkaufsliste in

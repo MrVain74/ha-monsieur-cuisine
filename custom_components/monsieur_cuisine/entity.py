@@ -4,9 +4,22 @@ from __future__ import annotations
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import DOMAIN, LIVE_MODEL
 from .coordinator import McCoordinator, McLiveCoordinator
 from .mcbridge.status import DeviceLiveStatus
+
+
+def main_device_id(coordinator: McCoordinator) -> str | None:
+    """Das (einzige) Gerät fürs Gruppieren konto-weiter Entitäten.
+
+    Bevorzugt ein MC3.0; sonst das erste Gerät; ``None`` wenn keins da ist
+    (dann bleiben die Entitäten ohne Gerät statt falsch zugeordnet).
+    """
+    geraete = (coordinator.data or {}).get("devices") or {}
+    for dev_id, dev in geraete.items():
+        if LIVE_MODEL in (dev.get("modelName") or ""):
+            return dev_id
+    return next(iter(geraete), None)
 
 
 class McDeviceEntity(CoordinatorEntity[McCoordinator]):

@@ -14,17 +14,19 @@ from __future__ import annotations
 from homeassistant.components.todo import TodoItem, TodoItemStatus, TodoListEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA_ACCOUNT, DOMAIN
 from .coordinator import McAccountCoordinator
+from .entity import main_device_id
 from .mcbridge.account import shopping_entries
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    account = hass.data[DOMAIN][entry.entry_id][DATA_ACCOUNT]
-    add([McShoppingList(account, entry.entry_id)])
+    daten = hass.data[DOMAIN][entry.entry_id]
+    add([McShoppingList(daten[DATA_ACCOUNT], entry.entry_id, main_device_id(daten["coordinator"]))])
 
 
 class McShoppingList(CoordinatorEntity[McAccountCoordinator], TodoListEntity):
@@ -34,9 +36,12 @@ class McShoppingList(CoordinatorEntity[McAccountCoordinator], TodoListEntity):
     _attr_translation_key = "shopping_list"
     _attr_icon = "mdi:cart"
 
-    def __init__(self, coordinator: McAccountCoordinator, entry_id: str) -> None:
+    def __init__(self, coordinator: McAccountCoordinator, entry_id: str,
+                 device_id: str | None = None) -> None:
         super().__init__(coordinator)
         self._attr_unique_id = f"{entry_id}_shopping_list"
+        if device_id:
+            self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, device_id)})
 
     @property
     def todo_items(self) -> list[TodoItem] | None:

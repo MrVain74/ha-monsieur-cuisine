@@ -17,12 +17,14 @@ from datetime import datetime, timedelta
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import DATA_ACCOUNT, DOMAIN
 from .coordinator import McAccountCoordinator
+from .entity import main_device_id
 from .mcbridge.account import PlannerEvent, planner_events
 from .mcbridge.client import McApiError, McClient
 
@@ -42,7 +44,8 @@ def _als_event(ev: PlannerEvent) -> CalendarEvent:
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
     daten = hass.data[DOMAIN][entry.entry_id]
-    add([McWeeklyPlanner(daten[DATA_ACCOUNT], daten["client"], entry.entry_id)])
+    add([McWeeklyPlanner(daten[DATA_ACCOUNT], daten["client"], entry.entry_id,
+                         main_device_id(daten["coordinator"]))])
 
 
 class McWeeklyPlanner(CoordinatorEntity[McAccountCoordinator], CalendarEntity):
@@ -52,10 +55,13 @@ class McWeeklyPlanner(CoordinatorEntity[McAccountCoordinator], CalendarEntity):
     _attr_translation_key = "weekly_planner"
     _attr_icon = "mdi:calendar-week"
 
-    def __init__(self, coordinator: McAccountCoordinator, client: McClient, entry_id: str) -> None:
+    def __init__(self, coordinator: McAccountCoordinator, client: McClient, entry_id: str,
+                 device_id: str | None = None) -> None:
         super().__init__(coordinator)
         self._client = client
         self._attr_unique_id = f"{entry_id}_weekly_planner"
+        if device_id:
+            self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, device_id)})
 
     @property
     def event(self) -> CalendarEvent | None:
