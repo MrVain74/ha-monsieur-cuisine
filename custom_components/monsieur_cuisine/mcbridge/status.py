@@ -315,16 +315,29 @@ def decode_extra_info(extra_info: str) -> DeviceLiveStatus:
     if isinstance(v := d.get("isTurboRunningState"), bool):
         st.turbo_active = v
 
+    # Zwei Feldnamensätze, je Modell (aus dem APK):
+    #   MC3.0  -> ExtraInfoEntity:        "temperature", "speed"  (-1 = fehlt)
+    #   MC0.5  -> CompactExtraInfoEntity: "temperatureValue", "speedLevel",
+    #                                     "ntcTemperatureValue", "errCode"
+    # Die Ist-Temperatur und der Fehlercode kommen nur beim MC0.5 vor.
     if isinstance(v := d.get("ntcTemperatureValue"), int) and v > 0:
         st.current_temp = v
-    if isinstance(v := d.get("temperatureValue"), int) and v > 0:
-        st.target_temp = v
+    for name in ("temperature", "temperatureValue"):
+        v = d.get(name)
+        if isinstance(v, int) and v > 0:
+            st.target_temp = v
+            break
     if isinstance(u := d.get("temperatureUnit"), str) and u:
         st.temp_unit = "F" if "F" in u.upper() else "C"
 
-    if isinstance(v := d.get("speedLevel"), int):
-        st.speed_raw = v
-        st.speed = v / 2
+    # Anders als beim Hex-Rahmen ist das hier KEIN Doppelwert: die App gibt
+    # ihn unverändert an die Anzeige weiter (fe/b.java, fe/c.java).
+    for name in ("speed", "speedLevel"):
+        v = d.get(name)
+        if isinstance(v, int) and v >= 0:
+            st.speed_raw = v
+            st.speed = float(v)
+            break
     if isinstance(v := d.get("isMotorAnti"), bool):
         st.direction = "links" if v else "rechts"
     if isinstance(v := d.get("errCode"), int):
@@ -342,6 +355,11 @@ def decode_extra_info(extra_info: str) -> DeviceLiveStatus:
         st.tick_seconds = st.elapsed_seconds
     elif st.remaining_seconds is not None:
         st.tick_seconds = st.remaining_seconds
+
+    # Die App deutet die Kochdaten nur bei command == 1 (fe/c.java). Wir
+    # verwerfen nichts, vermerken es aber – sonst rätselt man im Log.
+    if isinstance(v := d.get("command"), int) and v != 1:
+        st.problems = st.problems + (f"extraInfo command={v} (App wertet nur 1 aus)",)
 
     if isinstance(v := d.get("recipeID"), int) and v > 0:
         st.recipe_id = v

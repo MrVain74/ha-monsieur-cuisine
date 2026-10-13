@@ -4,6 +4,41 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.3.8] – 2026-10-13
+### Behoben
+- **`extraInfo` wurde beim MC3.0 nicht ausgewertet.** Seit 0.3.5 las
+  `decode_extra_info` die Feldnamen des **MC0.5** (`temperatureValue`,
+  `speedLevel`). Der MC3.0 benutzt laut App-Quellcode aber `ExtraInfoEntity`
+  mit `temperature` und `speed` – beide Werte blieben deshalb leer. Jetzt
+  greifen **beide** Namenssätze; `-1` gilt als „nicht vorhanden".
+- **Stufe aus `extraInfo` wird nicht mehr halbiert.** Die App gibt sie
+  unverändert an die Anzeige weiter (`fe/b.java`, `fe/c.java`); nur der Rohwert
+  aus dem Hex-Rahmen ist ein Doppelwert. Die Halbierung bleibt dort.
+- `extraInfo` mit `command != 1` wird vermerkt (die App wertet nur `1` aus),
+  aber nicht verworfen.
+
+### Dokumentation
+- Modell-Abdeckung aus dem APK geklärt: **MC3.0** (Smart) und **MC0.5**
+  (Compact) sind IoT-/live-fähig, **MC2.0** und **MC1.1** nicht. Die App
+  klassifiziert über die **Geräte-ID** (`MC30` ist die Vorgabe). Ein Parser mit
+  zwei Zweigen deckt beide Formate ab – genau so ist `status.py` gebaut.
+- Negativbefund: die App enthält **keinen** Bild-Upload und **kein** Anlegen
+  von Rezepten – dieser Weg liegt in der Website-API, nicht im APK.
+- Der Steuerbefehl-Katalog (`iot/v1/sendCommand`) ist als reine Referenz
+  festgehalten; diese Integration sendet nichts davon.
+- Die ausführlichen Befunde liegen in den (privaten) Projektunterlagen; eine
+  bereinigte öffentliche Fassung folgt erst nach Freigabe.
+
+### Sicherheit
+- Georgs echte `user_id` durch einen Dummy ersetzt (`tools/grpc_status.py`
+  sowie `tests/test_live_status.py`). **Hinweis:** in der bereits
+  veröffentlichten Historie (Commit `31c1f1f`) steht sie noch.
+
+### Tests
+- `tests/test_live_status.py` um die MC3.0-Feldnamen erweitert (eigener
+  Namenssatz, `-1` als „fehlt", fehlende Ist-Temperatur und Fehlercode,
+  `command`-Vermerk). Gesamt **114 Tests**.
+
 ## [0.3.7] – 2026-10-13
 ### Geändert
 - Einkaufsliste und Wochenplaner hängen jetzt am Monsieur-Cuisine-Gerät statt

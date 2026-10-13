@@ -169,7 +169,7 @@ def test_extra_info_voll():
     assert st.current_temp == 62
     assert st.target_temp == 100
     assert st.temp_unit == "C"
-    assert (st.speed_raw, st.speed) == (4, 2.0)
+    assert (st.speed_raw, st.speed) == (4, 4.0)   # extraInfo: kein Doppelwert
     assert st.direction == "links"
     assert st.is_countdown is True
     assert st.remaining_seconds == 90        # Millisekunden -> Sekunden
@@ -304,5 +304,54 @@ def test_kette_ohne_rahmen_nur_extra_info():
     meldung = decode_device_status(roh)
     st = decode_status(meldung.hex_command or None, meldung.extra_info or None)
     assert st.command_type == "pause"
-    assert st.speed == 1.0
+    assert st.speed == 2.0
     assert st.sources == ("extraInfo",)
+
+
+# --- MC3.0 schickt andere Feldnamen als MC0.5 ------------------------------
+# MC3.0 nutzt ExtraInfoEntity ("temperature", "speed"), MC0.5 dagegen
+# CompactExtraInfoEntity ("temperatureValue", "speedLevel", "ntcTemperatureValue",
+# "errCode"). Beide Saetze muessen greifen.
+
+
+def test_extra_info_mc30_feldnamen():
+    st = decode_extra_info(json.dumps({
+        "command": 1, "commandType": "RUNNING", "cookMode": 4, "type": 1,
+        "temperature": 100, "speed": 3, "isMotorAnti": False,
+        "isUpwardTimer": False, "remainingTime": 120000, "totalTime": 300000,
+    }))
+    assert st.target_temp == 100
+    assert (st.speed_raw, st.speed) == (3, 3.0)
+    assert st.cook_mode == "dämpfen"
+    assert st.direction == "rechts"
+    assert st.remaining_seconds == 120
+    assert st.problems == ()
+
+
+def test_extra_info_mc30_minus_eins_heisst_fehlt():
+    """ExtraInfoEntity hat -1 als Vorbelegung fuer temperature und speed."""
+    st = decode_extra_info(json.dumps({"command": 1, "temperature": -1, "speed": -1}))
+    assert st.target_temp is None
+    assert st.speed is None
+    assert st.speed_raw is None
+
+
+def test_extra_info_mc30_ohne_ist_temperatur_und_fehlercode():
+    """Beide Felder kommen nur beim MC0.5 vor - beim MC3.0 bleibt es leer."""
+    st = decode_extra_info(json.dumps({"command": 1, "temperature": 80}))
+    assert st.current_temp is None
+    assert st.error_code is None
+
+
+def test_extra_info_fremdes_command_wird_vermerkt():
+    st = decode_extra_info(json.dumps({"command": 0, "commandType": "STOP"}))
+    assert any("command=0" in h for h in st.problems)
+    assert st.command_type == "stop"      # trotzdem ausgewertet
+
+
+def test_extra_info_mc05_namen_bleiben_gueltig():
+    st = decode_extra_info(json.dumps({
+        "temperatureValue": 90, "speedLevel": 5, "ntcTemperatureValue": 44, "errCode": 3,
+    }))
+    assert (st.target_temp, st.current_temp, st.error_code) == (90, 44, 3)
+    assert (st.speed_raw, st.speed) == (5, 5.0)
