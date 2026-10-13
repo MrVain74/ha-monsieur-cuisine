@@ -24,18 +24,19 @@ from .const import (
     CONF_COMPANION_APP_ID,
     CONF_JWT,
     CONF_USER_ID,
+    DATA_ACCOUNT,
     DATA_LIVE,
     DOMAIN,
     EVENT_RECIPE_SENT,
     SERVICE_SEND_RECIPE,
 )
-from .coordinator import McCoordinator, McLiveCoordinator
+from .coordinator import McAccountCoordinator, McCoordinator, McLiveCoordinator
 from .http import ensure_views
 from .mcbridge import STATUS_DRAFT, build_payload, from_html, from_schema_org
 from .mcbridge.client import JwtAuth, McApiError, McClient
 
 _LOGGER = logging.getLogger(__name__)
-PLATFORMS = [Platform.BINARY_SENSOR, Platform.SENSOR]
+PLATFORMS = [Platform.BINARY_SENSOR, Platform.CALENDAR, Platform.SENSOR, Platform.TODO]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
@@ -72,6 +73,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = McCoordinator(hass, entry, client)
     await coordinator.async_config_entry_first_refresh()
 
+    # Konto-Daten (Einkaufsliste, Wochenplaner). Dürfen die Einrichtung nicht
+    # aufhalten: ein Fehler lässt nur todo/calendar vorerst leer, der Rest läuft.
+    account = McAccountCoordinator(hass, entry, client)
+    await account.async_refresh()
+
     # Live-Status (Push über gRPC). Läuft neben dem regelmäßigen Abruf und
     # darf die Einrichtung nicht aufhalten: schlägt der Strom fehl, bleiben nur
     # die Live-Entitäten unbestimmt.
@@ -79,7 +85,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     live.async_start()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
-        "client": client, "coordinator": coordinator, DATA_LIVE: live,
+        "client": client, "coordinator": coordinator,
+        DATA_ACCOUNT: account, DATA_LIVE: live,
     }
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     _register_services(hass)

@@ -12,6 +12,14 @@ CONF_REFRESH_TOKEN = "refresh_token"  # alt (v1), nur zur Abwärtskompatibilitä
 
 UPDATE_INTERVAL = timedelta(minutes=15)
 
+# Konto-Daten (Einkaufsliste, Wochenplaner) – ändern sich selten, daher
+# ruhiger Abruf.
+DATA_ACCOUNT = "account"
+ACCOUNT_UPDATE_INTERVAL = timedelta(minutes=30)
+# Wochenplaner-Vorschaufenster (Tage ab heute) für den Zustand des Kalenders.
+# Die API erlaubt höchstens ~1 Monat Spanne, deshalb unter 31 bleiben.
+PLANNER_WINDOW_DAYS = 30
+
 # Live-Status über gRPC (Push, kein Abruf-Intervall)
 DATA_LIVE = "live"
 # Nur dieses Modell liefert einen Rahmen, den wir deuten können.

@@ -4,21 +4,24 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import suppress
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 from homeassistant.util.dt import utcnow
 
 from .const import (
+    ACCOUNT_UPDATE_INTERVAL,
     DOMAIN,
     LIVE_MODEL,
     LIVE_RETRY_MAX,
     LIVE_RETRY_START,
     LIVE_STALE_AFTER,
+    PLANNER_WINDOW_DAYS,
     UPDATE_INTERVAL,
 )
 from .mcbridge.client import McApiError, McAuthError, McClient
@@ -45,6 +48,42 @@ class McCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "devices": {d.get("id"): d for d in devices},
             "own_recipes": recipes.get("total", 0),
         }
+
+
+class McAccountCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """Konto-Daten: Einkaufsliste und Wochenplaner-Fenster.
+
+    Beide ändern sich selten; ein ruhiger Abruf reicht. Der Planer wird nur für
+    ein Vorschaufenster (ab heute, ~1 Monat) geholt – für beliebige Zeiträume
+    fragt die Kalender-Entität selbst nach (``async_get_events``), denn die API
+    erlaubt je Abruf höchstens eine Monatsspanne.
+    """
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: McClient) -> None:
+        super().__init__(hass, _LOGGER, name=f"{DOMAIN}_account",
+                         update_interval=ACCOUNT_UPDATE_INTERVAL, config_entry=entry)
+        self.client = client
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        data: dict[str, Any] = {"shopping": None, "planner": []}
+        try:
+            data["shopping"] = await self.client.get_shopping_list()
+        except McAuthError as err:
+            raise ConfigEntryAuthFailed(str(err)) from err
+        except McApiError as err:
+            raise UpdateFailed(str(err)) from err
+
+        start = dt_util.start_of_local_day()
+        end = start + timedelta(days=PLANNER_WINDOW_DAYS)
+        try:
+            planer = await self.client.get_weekly_planner(int(start.timestamp()), int(end.timestamp()))
+            data["planner"] = (planer or {}).get("weeklyPlanner", [])
+        except McAuthError as err:
+            raise ConfigEntryAuthFailed(str(err)) from err
+        except McApiError as err:
+            # Ein Planer-Fehler darf die Einkaufsliste nicht mitreißen.
+            _LOGGER.warning("MC-Konto: Wochenplaner-Abruf fehlgeschlagen: %s", err)
+        return data
 
 
 class McLiveCoordinator(DataUpdateCoordinator[DeviceLiveStatus | None]):

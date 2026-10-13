@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.3.6] – 2026-10-13
+### Neu
+- **Einkaufsliste als Aufgabenliste (`todo`).** Zeigt die Konto-Einkaufsliste in
+  Home Assistant – Rezept-Zutaten und freie Einträge in einer Liste, mit Menge
+  und Einheit als Text (Unicode-Brüche ½/¼ bleiben erhalten), inklusive
+  abgehakt/offen. Vorerst **nur lesend**; das Abhaken im HA folgt, sobald der
+  Schreib-Endpunkt am echten Konto bestätigt ist.
+- **Wochenplaner als Kalender (`calendar`).** Geplante Rezepte erscheinen als
+  **Ganztagstermine** (der Planer kennt nur Tagesfächer; `date` statt `datetime`,
+  sonst verschiebt die Zeitzone den Eintrag auf den Vortag). Rezeptname als Titel,
+  URL und Dauer in der Beschreibung. Beliebige Zeiträume werden in
+  ≤1-Monats-Scheiben geholt (API-Grenze).
+- `McAccountCoordinator`: ruhiger Abruf (30 min) von Einkaufsliste und
+  Planer-Vorschaufenster; ein Planer-Fehler reißt die Einkaufsliste nicht mit.
+
 ## [0.3.5] – 2026-10-13
 ### Neu
 - **Live-Status beim Kochen (Push über gRPC).** `McLiveCoordinator` abonniert

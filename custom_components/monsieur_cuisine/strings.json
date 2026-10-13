@@ -68,6 +68,16 @@
       "error_code": {
         "name": "Fehlercode"
       }
+    },
+    "todo": {
+      "shopping_list": {
+        "name": "Einkaufsliste"
+      }
+    },
+    "calendar": {
+      "weekly_planner": {
+        "name": "Wochenplaner"
+      }
     }
   },
   "services": {
