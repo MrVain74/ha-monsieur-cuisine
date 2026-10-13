@@ -40,8 +40,11 @@ Jede Meldung enthält:
   Betriebsart, Ziel-Temperatur, Stufe, Restzeit, Schritt usw.). Das ist beim
   **MC3.0** die maßgebliche Quelle.
 - **`hexCommand`** – beim **MC0.5** zusätzlich ein binärer Rahmen (TLV), der
-  u. a. die Ist-Temperatur und den Deckelzustand trägt. Beim MC3.0 wird dieser
-  Rahmen von der Hersteller-App selbst nicht ausgewertet.
+  u. a. die Ist-Temperatur und den Deckelzustand trägt. Beim **MC3.0** ist dieser
+  Rahmen ein reines **Befehls-Echo** (Soll-Werte: Ziel-Temperatur, Stufe,
+  Restzeit, Betriebsart, Zähler, Prüfsumme) – er enthält **keine Messwerte** und
+  wird auch von der Hersteller-App nicht ausgewertet. Maßgeblich ist beim MC3.0
+  `extraInfo`.
 
 Die Werte werden aus beiden Quellen zusammengeführt und auf die Entitäten
 abgebildet. Fehlt ein einzelner Wert, zeigt die betreffende Entität
@@ -52,10 +55,19 @@ verfügbar".
 
 - Die Feldnamen in `extraInfo` unterscheiden sich je Modell (z. B. Temperatur
   und Stufe). Die Integration kennt beide Namenssätze.
-- **Ist-Temperatur und Fehlercode liefert nur der MC0.5.** Beim MC3.0 fehlen sie
-  im Status; die entsprechenden Sensoren bleiben dort „unbekannt".
+- **Beim MC3.0 überträgt die Cloud keine Messwerte** – kein Ist-Temperatur-,
+  Deckel-, Gewichts- oder Fehlercode-Wert (am echten Gerät geprüft: beim
+  Aufheizen wandert kein Byte, `extraInfo` führt keine solchen Felder). Diese
+  Entitäten gibt es für den MC3.0 daher nicht. Übertragen werden nur **aus
+  Messungen abgeleitete Zustände** (z. B. „Vorheizen").
 - Zeiten können als Restzeit (Countdown) oder als verstrichene Zeit (Stoppuhr)
   kommen; der Modus steht als Attribut am Restzeit-Sensor.
+
+**Entitäten beim MC3.0:** Kochzustand, Betriebsart, Ziel-Temperatur, Stufe,
+Restzeit, Rezept (Name/Bild/ID als Attribute) und Schritt-Nummer im
+Rezeptbetrieb, dazu die Binärsensoren **Vorheizen** und **Waage aktiv**. Die
+Fertig-Meldung (`DONE`/`RECIPE_DONE`) eignet sich als Auslöser für
+Benachrichtigungen – nicht `STEP_DONE` (das meldet jeden Zwischenschritt).
 
 ## Einkaufsliste und Wochenplaner
 
@@ -98,6 +110,9 @@ Hochladen des Bildes ist derzeit über die Website nötig.
 
 - Live-Werte sind am **MC3.0** getestet; der MC0.5-Pfad ist aus dem
   Datenformat abgeleitet, aber noch nicht an einem Gerät geprüft.
-- Deckelzustand beim MC3.0: noch offen (im Status nicht enthalten).
+- Ist-Temperatur, Deckel, Gewicht und Fehlercode beim MC3.0: **über die Cloud
+  nicht verfügbar** (am echten Gerät geprüft, siehe oben) – nur lokal am Gerät.
+- Rezept-**Schritttext** und **Gesamtzahl** der Schritte: noch offen (kommen
+  nicht im Live-Strom; müssten über die Rezept-API nachgeladen werden).
 - Abhaken der Einkaufsliste und Anlegen von Planer-Einträgen: vorbereitet,
   noch nicht aktiv.

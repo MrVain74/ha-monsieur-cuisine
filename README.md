@@ -4,7 +4,7 @@
 > cloud interface of the Monsieur Cuisine app. May break at any time if the vendor changes things.
 > For your own account only, gentle polling (max. 1 request/second, every 15 minutes).
 
-**Status: Alpha (v0.4.5)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
+**Status: Alpha (v0.4.7)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
 👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) · **Funktionsweise:** [`docs/FUNKTIONSWEISE.md`](docs/FUNKTIONSWEISE.md)
 
@@ -17,7 +17,7 @@
 | Sensor *Own recipes* | ✅ |
 | Diagnostic *Cloud connection* (device currently connected to the cloud) | ✅ |
 | Sign-in (Lidl login directly in Home Assistant) | ✅ setup dialog |
-| **Live cooking status** (cooking state, target temperature, speed, remaining time, lid, error) | ✅ via the cloud (gRPC push), decoded – for the MC Smart |
+| **Live cooking status** (cooking state, mode, target temperature, speed, remaining time, recipe & step, preheating, scale) | ✅ via the cloud (gRPC push), decoded – for the MC Smart |
 | **Shopping list** as a to-do list, **weekly planner** as a calendar | ✅ read-only (ticking/adding still to come) |
 | Save recipe as “private” (shows up on the device) | ⏳ needs image upload – draft for now, add the picture on the website |
 
@@ -25,10 +25,12 @@
 
 Set up on the device *Monsieur Cuisine*:
 
-- **Sensors** (live while cooking): cooking state, current temperature, target temperature, speed, remaining time, error code (diagnostic). Live values are available on the MC Smart; while the device is off they read *unavailable*.
-- **Binary sensors**: lid, cloud connection (diagnostic).
+- **Sensors** (live while cooking): cooking state, mode, target temperature, speed, remaining time, recipe, step. Live values are available on the MC Smart; while the device is off they read *unavailable*.
+- **Binary sensors**: preheating, scale active, cloud connection (diagnostic).
 - **Sensor** *Own recipes*: number of your own recipes.
 - **To-do list** *Shopping list* and **calendar** *Weekly planner* from your account (read-only for now).
+
+> The MC Smart sends a **command echo** over the cloud (setpoints, not measurements), so there is **no actual temperature, lid or error-code** value — confirmed by live testing. Those are only available locally at the device.
 
 ## Supported models
 

@@ -4,6 +4,21 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.7] – 2026-10-13
+### Dokumentation
+- **README und `FUNKTIONSWEISE.md` an die v0.4.6-Entitäten angepasst.** Die
+  Beschreibungen nannten noch die entfernten Entitäten (Ist-Temperatur, Deckel,
+  Fehlercode) und keine der neuen.
+  - README: Status v0.4.7; „Live cooking status" und die Entitätenliste neu
+    (Kochzustand, Betriebsart, Ziel-Temperatur, Stufe, Restzeit, Rezept, Schritt;
+    Binärsensoren Vorheizen/Waage/Cloud-Verbindung). Hinweis ergänzt, dass der
+    MC3.0 ein Befehls-Echo schickt – keine Messwerte (Ist-Temp/Deckel/Fehlercode).
+  - `FUNKTIONSWEISE.md`: `hexCommand` beim MC3.0 als Befehls-Echo beschrieben;
+    Modellunterschiede und Grenzen auf „Messwerte über die Cloud nicht verfügbar"
+    aktualisiert; neue Entitätenliste und der `DONE`/`RECIPE_DONE`-Hinweis für
+    Benachrichtigungen; Schritttext/Gesamtzahl als offener Punkt.
+- Keine Code-Änderung; **145 Tests** unverändert grün.
+
 ## [0.4.6] – 2026-10-13
 ### Entfernt – diese Werte gibt die Cloud nicht her
 Am Testabend mit dem echten Gerät gemessen (vier Mitschnitte, 150 Frames):
