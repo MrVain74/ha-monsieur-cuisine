@@ -1,19 +1,22 @@
 """Einrichtung über die Oberfläche – Lidl-Login direkt in Home Assistant.
 
-Drei Wege, der Nutzer wählt im ersten Schritt:
+Ein Weg, und zwar der **Browser-Helfer**: Die kleine Erweiterung fängt nach dem
+Lidl-Login die Weiterleitung auf die App-Adresse ab und ruft damit die
+Empfangs-Adresse von HA auf. Der Einrichtungsdialog läuft von allein durch –
+ohne Klick, ohne Kopieren.
 
-* **Ohne Zusatzprogramm (empfohlen):** HA liefert eine eigene Hilfsseite mit einem
-  **Lesezeichen** aus. Lidl antwortet dank ``response_mode=form_post`` mit einer
-  normalen Seite (statt der Weiterleitung auf die App-Adresse), in der der ``code``
-  als verstecktes Feld steht. Das Lesezeichen liest ihn aus und ruft die HA-
-  Empfangsadresse auf. Kein Add-on, keine Installation, keine Berechtigungen.
-* **Mit Browser-Helfer:** Kleine Browser-Erweiterung fängt die Weiterleitung ab und
-  schickt den ``code`` vollautomatisch zurück – ganz ohne Klick.
-* **Manuell:** Nutzer meldet sich an und fügt die Weiterleitungs-Adresse, den
-  Seitenquelltext oder den nackten Code ein. Rückfallebene, die überall greift.
+Warum nur dieser Weg? Lidl übergibt den Einmal-Code ausschließlich an eine fest
+in der Hersteller-App einkompilierte Adresse (``lidl-com…://login/prod``), und
+die kann ein Browser nicht an Home Assistant weitergeben: In Chrome wird die
+Navigation auf dieses Schema **stillschweigend verworfen** – die Adresse
+erscheint nirgends, auch nicht in der Adressleiste. Abfangen kann sie daher nur
+etwas, das neben der Seite mitlesen darf. Frühere Versuche über ein Lesezeichen
+(``response_mode=form_post``) und über manuelles Einfügen waren in Chrome nicht
+zuverlässig und sind wieder entfallen.
 
-Die feste Rückleit-Adresse der App (``lidl-com…``) lässt sich nicht auf HA
-umbiegen – daher diese drei Wege statt eines einfachen Redirects.
+Technisch: Authorization Code mit PKCE. Der ``state`` trägt die Flow-ID, die
+HA-Empfangsadresse und ein kurzlebiges Token, damit die Erweiterung weiß, wohin
+sie den Code schicken soll, und damit HA ihn dem richtigen Dialog zuordnet.
 """
 from __future__ import annotations
 
@@ -22,10 +25,7 @@ import base64
 import json
 import logging
 import secrets
-import urllib.parse
 from typing import Any
-
-import voluptuous as vol
 
 from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -33,7 +33,6 @@ from homeassistant.helpers.network import NoURLAvailableError, get_url
 
 from .const import (
     CALLBACK_PATH,
-    LOGIN_PATH,
     CONF_COMPANION_APP_ID,
     CONF_JWT,
     CONF_LIDL_REFRESH_TOKEN,
@@ -46,12 +45,9 @@ from .mcbridge.auth import (
     McAuthError,
     PkcePair,
     authorize_url,
-    extract_code,
     login_with_code,
     new_pkce,
 )
-
-CONF_REDIRECT_URL = "redirect_url"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -67,23 +63,43 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._pkce: PkcePair | None = None
         self._code: str | None = None
-        self._base: str = ""
         # Ergebnis der Code-Einlösung; der Task sorgt dafür, dass sie genau
         # einmal läuft, auch wenn der Schritt mehrfach aufgerufen wird.
         self._login_task: asyncio.Task | None = None
         self._login: dict[str, Any] | None = None
         self._login_error: str | None = None
 
-    # --- Auswahl --------------------------------------------------------------
+    # --- Anmeldung über den Browser-Helfer (external step) --------------------
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        # Empfangs-Adresse und Hilfsseite schon jetzt registrieren – sonst laufen
-        # sie beim allerersten Hinzufügen (noch kein Config-Entry) auf 404.
+        """Erster und einziger Schritt: Lidl-Login im Browser.
+
+        Wird zweimal durchlaufen: beim Hinzufügen baut er den External Step auf,
+        und später ruft die Empfangs-Adresse ihn mit dem ``code`` wieder auf.
+        """
+        # Empfangs-Adresse schon jetzt registrieren – beim allerersten
+        # Hinzufügen gibt es noch keinen Config-Entry, also läuft async_setup
+        # noch nicht, und der Callback liefe auf 404.
         ensure_views(self.hass)
-        return self.async_show_menu(
-            step_id="user", menu_options=["auto", "bookmark", "manual"]
+
+        if self._pkce is None:
+            self._pkce = new_pkce()
+
+        # Rückmeldung vom Helfer (über die Empfangs-Adresse) → Code gesetzt
+        if user_input is not None and user_input.get("code"):
+            # Hier – nicht in "finish" – wird eingelöst: diesen Zweig ruft nur
+            # die Empfangs-Adresse auf, und zwar genau einmal pro Anmeldung.
+            self._code = user_input["code"]
+            await self._redeem_once(self._code)
+            return self.async_external_step_done(next_step_id="finish")
+
+        state = self._new_state()
+        if state is None:
+            return self.async_abort(reason="no_url")
+        return self.async_external_step(
+            step_id="user", url=authorize_url(self._pkce, state=state)
         )
 
-    # --- Gemeinsam: state mit Flow-ID, HA-Empfangsadresse und Token ----------
+    # --- state mit Flow-ID, HA-Empfangsadresse und Token ---------------------
     def _new_state(self) -> str | None:
         """Erzeugt den ``state``; None, wenn HA seine eigene Adresse nicht kennt."""
         token = secrets.token_urlsafe(8)
@@ -94,7 +110,6 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
             base = get_url(self.hass, allow_external=True, allow_internal=True)
         except NoURLAvailableError:
             return None
-        self._base = base
         return _b64url({"fid": self.flow_id, "cb": base + CALLBACK_PATH, "s": token})
 
     # --- Code-Einlösung: genau EINMAL pro Vorgang ----------------------------
@@ -125,57 +140,7 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         else:
             _LOGGER.warning("MC-Einloesung: erfolgreich")
 
-    # --- Lesezeichen (ohne Erweiterung, external step) ------------------------
-    async def async_step_bookmark(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Login über eine HA-eigene Hilfsseite mit Lesezeichen.
-
-        Lidl antwortet hier mit ``response_mode=form_post``, also mit einer
-        HTML-Seite statt einer Weiterleitung auf die App-Adresse. Das Lesezeichen
-        liest ``code`` und ``state`` daraus und ruft die Empfangs-Adresse auf.
-        """
-        if self._pkce is None:
-            self._pkce = new_pkce()
-
-        if user_input is not None and user_input.get("code"):
-            # Hier – nicht in "finish" – wird eingelöst: diesen Zweig ruft nur
-            # die Empfangs-Adresse auf, und zwar genau einmal pro Anmeldung.
-            self._code = user_input["code"]
-            await self._redeem_once(self._code)
-            return self.async_external_step_done(next_step_id="finish")
-
-        state = self._new_state()
-        if state is None:
-            return self.async_abort(reason="no_url")
-        authorize = authorize_url(self._pkce, state=state, response_mode="form_post")
-        url = self._base + LOGIN_PATH + "?" + urllib.parse.urlencode(
-            {"state": state, "authorize": authorize}
-        )
-        return self.async_external_step(step_id="bookmark", url=url)
-
-    # --- Automatisch (Browser-Helfer, external step) --------------------------
-    async def async_step_auto(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        if self._pkce is None:
-            self._pkce = new_pkce()
-
-        # Rückmeldung vom Helfer (über die Empfangs-Adresse) → Code gesetzt
-        if user_input is not None and user_input.get("code"):
-            # Hier – nicht in "finish" – wird eingelöst: diesen Zweig ruft nur
-            # die Empfangs-Adresse auf, und zwar genau einmal pro Anmeldung.
-            self._code = user_input["code"]
-            await self._redeem_once(self._code)
-            return self.async_external_step_done(next_step_id="finish")
-
-        # state trägt Flow-ID + HA-Empfangsadresse + Sicherheits-Token
-        state = self._new_state()
-        if state is None:
-            return self.async_abort(reason="no_url")
-        return self.async_external_step(
-            step_id="auto", url=authorize_url(self._pkce, state=state)
-        )
-
-    # --- Abschluss (gemeinsam) ------------------------------------------------
+    # --- Abschluss ------------------------------------------------------------
     async def async_step_finish(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Nur noch den Eintrag anlegen – ohne Netzverkehr.
 
@@ -190,36 +155,6 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
             _LOGGER.warning("MC-Finish: kein Anmeldeergebnis vorhanden")
             return self.async_abort(reason="invalid_auth")
         return await self._create(self._login)
-
-    # --- Manuell (Adresse einfügen) ------------------------------------------
-    async def async_step_manual(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
-        errors: dict[str, str] = {}
-        if self._pkce is None:
-            self._pkce = new_pkce()
-
-        if user_input is not None:
-            session = async_get_clientsession(self.hass)
-            try:
-                code = extract_code(user_input[CONF_REDIRECT_URL])
-                result = await login_with_code(session, code, self._pkce.verifier)
-            except McAuthError:
-                errors["base"] = "invalid_auth"
-            except Exception:  # noqa: BLE001
-                errors["base"] = "cannot_connect"
-            else:
-                return await self._create(result)
-
-        return self.async_show_form(
-            step_id="manual",
-            data_schema=vol.Schema({vol.Required(CONF_REDIRECT_URL): str}),
-            # form_post: nach dem Login steht der Code als verstecktes Feld im
-            # Seitenquelltext – in Chrome zuverlässig kopierbar (anders als die
-            # lidl-com…-Adresse, die Chrome nicht in der Adressleiste zeigt).
-            description_placeholders={
-                "login_url": authorize_url(self._pkce, response_mode="form_post")
-            },
-            errors=errors,
-        )
 
     # --- Eintrag anlegen ------------------------------------------------------
     async def _create(self, result: dict[str, Any]) -> ConfigFlowResult:

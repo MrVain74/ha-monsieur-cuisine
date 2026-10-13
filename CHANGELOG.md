@@ -4,6 +4,45 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.0] – 2026-10-13
+### Geändert – spürbar
+- **Nur noch ein Anmeldeweg: der Browser-Helfer.** Das Auswahlmenü beim
+  Hinzufügen ist weg; die Einrichtung geht direkt in den Login. Die Wege
+  „Ohne Zusatzprogramm (Lesezeichen)" und „Manuell (Quelltext einfügen)" sind
+  **vollständig entfernt** – sie waren in Chrome nicht zuverlässig: die
+  Weiterleitung auf die App-Adresse wird dort stillschweigend verworfen, und die
+  `form_post`-Seite mit dem Code ist flüchtig (Chrome unterbricht sie mit der
+  „nicht sicher"-Warnung).
+- `async_step_user` ist jetzt der Login-Schritt selbst (vorher `async_step_auto`
+  hinter einem Menü). Wer die Integration erneut hinzufügt, landet sofort im
+  gewohnten „Website öffnen".
+
+### Entfernt
+- Flow-Schritte `async_step_bookmark` und `async_step_manual`.
+- `McLoginView` samt Lesezeichen-Hilfsseite, `LOGIN_PATH`, Eingabefeld
+  `redirect_url`.
+- In `mcbridge/auth.py`: der Parameter `response_mode` von `authorize_url`
+  (Weg A braucht den Query-Modus, und der ist die Vorgabe) sowie `extract_code`
+  und `code_from_redirect` – beide gab es nur für die entfernten Wege.
+- Alle zugehörigen Texte in `strings.json` und den Übersetzungen (de + en),
+  einschließlich des nun gegenstandslosen `error`-Blocks.
+
+### Unverändert
+- `McCallbackView` und `ensure_views` bleiben – Weg A braucht die
+  Empfangs-Adresse, und sie muss schon während des Dialogs registriert sein.
+- Einmal-Einlösung (`_redeem_once`), Vortritt für den offenen Dialog,
+  Live-Status, Einkaufsliste und Wochenplaner: nicht angetastet.
+
+### Tests
+- `tests/test_auth_code.py` → `tests/test_authorize_url.py`, neu geschrieben für
+  den einen Weg (Rückleit-Adresse, state, PKCE, Pflichtparameter, kein
+  `response_mode`). `tests/test_redeem_once.py` prüft jetzt `async_step_user`.
+  Gesamt **105 Tests**.
+
+### Doku
+- README und `docs/EINRICHTUNG.md` beschreiben nur noch den Helfer-Weg, mit der
+  Begründung, warum ein Zusatzprogramm nötig ist.
+
 ## [0.3.9] – 2026-10-13
 ### Dokumentation
 - README aktualisiert: Live-Status-Sensoren sowie Einkaufsliste/Wochenplaner

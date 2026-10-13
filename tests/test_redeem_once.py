@@ -1,5 +1,9 @@
 """Der Einmal-Code darf genau EINMAL eingelöst werden.
 
+Es gibt nur noch den Weg über den Browser-Helfer: ``async_step_user`` baut den
+External Step auf und wird später von der Empfangs-Adresse mit dem ``code``
+erneut aufgerufen.
+
 Hintergrund: Den Abschluss-Schritt eines Config-Flows können zwei Treiber
 aufrufen – der noch offene Einrichtungsdialog (HA weckt ihn über
 EVENT_DATA_ENTRY_FLOW_PROGRESSED) und die Empfangs-Adresse. Lag der Code-Tausch
@@ -29,9 +33,6 @@ class FakeConfigFlow:
 
     def __init_subclass__(cls, **kwargs):
         pass
-
-    def async_show_menu(self, **kw):
-        return {"type": "menu", **kw}
 
     def async_show_form(self, **kw):
         return {"type": "form", **kw}
@@ -106,7 +107,6 @@ def _load_config_flow():
           McAuthError=McAuthError,
           PkcePair=types.SimpleNamespace,
           authorize_url=lambda pkce, **kw: "https://accounts.lidl.com/connect/authorize",
-          extract_code=lambda text: text,
           login_with_code=ZAEHLER.login_with_code,
           new_pkce=lambda: types.SimpleNamespace(
               verifier="VERIFIER", challenge="CHALLENGE", state="S", nonce="N"))
@@ -145,12 +145,11 @@ def _zaehler_zuruecksetzen():
     ZAEHLER.verzoegerung = 0
 
 
-@pytest.mark.parametrize("schritt", ["auto", "bookmark"])
-def test_zweiter_aufruf_loest_nicht_erneut_ein(schritt):
-    """Beide External-Step-Wege dürfen den Code nur einmal verbrennen."""
+def test_zweiter_aufruf_loest_nicht_erneut_ein():
+    """Der External Step darf den Code nur einmal verbrennen."""
     async def ablauf():
         flow = _neuer_flow()
-        methode = getattr(flow, f"async_step_{schritt}")
+        methode = flow.async_step_user
         await methode(None)                      # External Step aufbauen
         erst = await methode({"code": "CODE123"})
         zweit = await methode({"code": "CODE123"})
@@ -168,10 +167,10 @@ def test_gleichzeitige_treiber_loesen_nur_einmal_ein():
     async def ablauf():
         flow = _neuer_flow()
         ZAEHLER.verzoegerung = 0.05           # Netz-Latenz nachbilden
-        await flow.async_step_auto(None)
+        await flow.async_step_user(None)
         await asyncio.gather(
-            flow.async_step_auto({"code": "CODE123"}),
-            flow.async_step_auto({"code": "CODE123"}),
+            flow.async_step_user({"code": "CODE123"}),
+            flow.async_step_user({"code": "CODE123"}),
         )
         return flow
 
@@ -183,8 +182,8 @@ def test_gleichzeitige_treiber_loesen_nur_einmal_ein():
 def test_finish_macht_keinen_netzverkehr_und_legt_eintrag_an():
     async def ablauf():
         flow = _neuer_flow()
-        await flow.async_step_auto(None)
-        await flow.async_step_auto({"code": "CODE123"})
+        await flow.async_step_user(None)
+        await flow.async_step_user({"code": "CODE123"})
         vorher = len(ZAEHLER.aufrufe)
         ergebnis = await flow.async_step_finish()
         return ergebnis, vorher, len(ZAEHLER.aufrufe)
@@ -200,8 +199,8 @@ def test_finish_zweimal_loest_nichts_erneut_aus():
     """Rufen beide Treiber finish auf, bleibt es bei einer Einlösung."""
     async def ablauf():
         flow = _neuer_flow()
-        await flow.async_step_auto(None)
-        await flow.async_step_auto({"code": "CODE123"})
+        await flow.async_step_user(None)
+        await flow.async_step_user({"code": "CODE123"})
         return await flow.async_step_finish(), await flow.async_step_finish()
 
     erst, zweit = asyncio.run(ablauf())
@@ -214,8 +213,8 @@ def test_fehlgeschlagene_einloesung_wird_gemerkt_und_nicht_wiederholt():
     async def ablauf():
         flow = _neuer_flow()
         ZAEHLER.fehler = McAuthError("Code-Einlösung fehlgeschlagen: 400 invalid_grant")
-        await flow.async_step_auto(None)
-        await flow.async_step_auto({"code": "CODE123"})
+        await flow.async_step_user(None)
+        await flow.async_step_user({"code": "CODE123"})
         return await flow.async_step_finish()
 
     ergebnis = asyncio.run(ablauf())
@@ -227,8 +226,8 @@ def test_netzfehler_meldet_cannot_connect():
     async def ablauf():
         flow = _neuer_flow()
         ZAEHLER.fehler = OSError("Netz weg")
-        await flow.async_step_auto(None)
-        await flow.async_step_auto({"code": "CODE123"})
+        await flow.async_step_user(None)
+        await flow.async_step_user({"code": "CODE123"})
         return await flow.async_step_finish()
 
     assert asyncio.run(ablauf()) == {"type": "abort", "reason": "cannot_connect"}

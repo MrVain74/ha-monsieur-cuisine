@@ -39,13 +39,10 @@ ATTR_DRY_RUN = "dry_run"
 
 EVENT_RECIPE_SENT = f"{DOMAIN}_recipe_sent"
 
-# Automatischer Login über den Browser-Helfer:
+# Login über den Browser-Helfer:
 # Die Empfangs-Adresse, an die der Helfer den `code` schickt.
 CALLBACK_PATH = f"/api/{DOMAIN}/callback"
-# Anmelde-Hilfsseite (Weg "Lesezeichen", ohne Browser-Erweiterung):
-# HA liefert selbst eine Seite mit dem Lesezeichen und dem Lidl-Login-Knopf aus.
-LOGIN_PATH = f"/api/{DOMAIN}/login"
 # Ablage für laufende Login-Vorgänge (flow_id -> Sicherheits-Token)
 DATA_FLOW_TOKENS = "flow_tokens"
-# Merker, dass die Empfangs-/Hilfsseiten (HTTP-Views) registriert sind
+# Merker, dass die Empfangs-Adresse (HTTP-View) registriert ist
 DATA_VIEW_REGISTERED = "view_registered"
