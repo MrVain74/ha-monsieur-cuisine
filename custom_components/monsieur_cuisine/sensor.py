@@ -9,7 +9,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import EntityCategory, UnitOfTemperature, UnitOfTime
+from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -31,11 +31,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
             continue
         entities += [
             McLiveCookState(live, dev_id),
-            McLiveCurrentTemperature(live, dev_id),
+            McLiveMode(live, dev_id),
             McLiveTargetTemperature(live, dev_id),
             McLiveSpeed(live, dev_id),
             McLiveRemaining(live, dev_id),
-            McLiveErrorCode(live, dev_id),
+            McLiveRecipe(live, dev_id),
+            McLiveStep(live, dev_id),
         ]
     add(entities)
 
@@ -88,21 +89,6 @@ class McLiveCookState(McLiveEntity, SensorEntity):
             "hinweise": ", ".join(st.problems) or None,
         }
         return {k: v for k, v in werte.items() if v is not None}
-
-
-class McLiveCurrentTemperature(McLiveEntity, SensorEntity):
-    """Ist-Temperatur im Topf (NTC-Fühler)."""
-
-    _attr_device_class = SensorDeviceClass.TEMPERATURE
-    _attr_state_class = SensorStateClass.MEASUREMENT
-    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-
-    def __init__(self, live, device_id: str) -> None:
-        super().__init__(live, device_id, "current_temperature")
-
-    @property
-    def native_value(self) -> int | None:
-        return None if self.status is None else self.status.current_temp
 
 
 class McLiveTargetTemperature(McLiveEntity, SensorEntity):
@@ -174,15 +160,76 @@ class McLiveRemaining(McLiveEntity, SensorEntity):
         return {k: v for k, v in werte.items() if v is not None}
 
 
-class McLiveErrorCode(McLiveEntity, SensorEntity):
-    """Fehlercode des Geräts (0 = kein Fehler)."""
+class McLiveMode(McLiveEntity, SensorEntity):
+    """Betriebsart laut Gerät – bei Rezepten wechselt sie pro Schritt.
 
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_icon = "mdi:alert-circle-outline"
+    Quelle ist **Byte 19** des Rahmens, nicht ``extraInfo.cookMode``: Beim
+    Kneten schickte der Dienst dort einen Wert, der in keiner bekannten Tabelle
+    vorkommt (124), während Byte 19 klar „kneten" sagte.
+    """
+
+    _attr_icon = "mdi:format-list-bulleted-type"
 
     def __init__(self, live, device_id: str) -> None:
-        super().__init__(live, device_id, "error_code")
+        super().__init__(live, device_id, "device_mode")
+
+    @property
+    def native_value(self) -> str | None:
+        if (st := self.status) is None:
+            return None
+        return st.device_mode or st.cook_mode
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if (st := self.status) is None:
+            return {}
+        werte = {"rohwert": st.device_mode_raw, "drehrichtung": st.direction}
+        return {k: v for k, v in werte.items() if v is not None}
+
+
+class McLiveRecipe(McLiveEntity, SensorEntity):
+    """Name des laufenden Rezepts (leer beim manuellen Kochen)."""
+
+    _attr_icon = "mdi:book-open-variant"
+
+    def __init__(self, live, device_id: str) -> None:
+        super().__init__(live, device_id, "recipe")
+
+    @property
+    def native_value(self) -> str | None:
+        return None if self.status is None else self.status.recipe_name
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if (st := self.status) is None:
+            return {}
+        werte = {"rezept_id": st.recipe_id, "bild": st.recipe_image,
+                 "portionsgroesse_id": st.serving_size_id}
+        return {k: v for k, v in werte.items() if v is not None}
+
+
+class McLiveStep(McLiveEntity, SensorEntity):
+    """Nummer des laufenden Rezeptschritts.
+
+    Die Gesamtzahl der Schritte schickt der Dienst beim MC3.0 nicht
+    (``totalStepIndex`` fehlt); sie und der Schritt-Text müssten über die
+    Rezept-API nachgeladen werden – noch nicht umgesetzt.
+    """
+
+    _attr_icon = "mdi:format-list-numbered"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, live, device_id: str) -> None:
+        super().__init__(live, device_id, "step")
 
     @property
     def native_value(self) -> int | None:
-        return None if self.status is None else self.status.error_code
+        if (st := self.status) is None or not st.step_index:
+            return None
+        return st.step_index
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        if (st := self.status) is None or st.total_step_index is None:
+            return {}
+        return {"schritte_gesamt": st.total_step_index}

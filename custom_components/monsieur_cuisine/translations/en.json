@@ -28,19 +28,19 @@
       "cloud_connection": {
         "name": "Cloud connection"
       },
-      "lid": {
-        "name": "Lid"
+      "preheat": {
+        "name": "Preheating"
+      },
+      "scale": {
+        "name": "Scale"
       }
     },
     "sensor": {
-      "own_recipes": {
-        "name": "Own recipes"
-      },
       "cook_state": {
         "name": "Cooking state"
       },
-      "current_temperature": {
-        "name": "Current temperature"
+      "device_mode": {
+        "name": "Mode"
       },
       "target_temperature": {
         "name": "Target temperature"
@@ -51,8 +51,14 @@
       "remaining_time": {
         "name": "Remaining time"
       },
-      "error_code": {
-        "name": "Error code"
+      "recipe": {
+        "name": "Recipe"
+      },
+      "step": {
+        "name": "Step"
+      },
+      "own_recipes": {
+        "name": "Own recipes"
       }
     },
     "todo": {

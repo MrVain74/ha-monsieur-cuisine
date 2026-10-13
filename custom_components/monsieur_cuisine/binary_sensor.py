@@ -21,7 +21,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEnt
     ]
     for dev_id, dev in coordinator.data["devices"].items():
         if LIVE_MODEL in (dev.get("modelName") or ""):
-            entities.append(McLiveLid(live, dev_id))
+            entities += [McLivePreheat(live, dev_id), McLiveScale(live, dev_id)]
     add(entities)
 
 
@@ -45,21 +45,42 @@ class McCloudConnection(McDeviceEntity, BinarySensorEntity):
         return self.device.get("iotConnectionStatus") == "CONNECT"
 
 
-class McLiveLid(McLiveEntity, BinarySensorEntity):
-    """Deckel offen oder geschlossen.
+class McLivePreheat(McLiveEntity, BinarySensorEntity):
+    """Heizt auf die Zieltemperatur (``extraInfo.isPreHeat``).
 
-    Hinweis: Dieses Feld liefert bisher nur der TLV-Rahmen (Tag 0x0209); in
-    ``extraInfo`` kommt es nicht vor. Beim MC3.0 bleibt der Wert daher
-    vorerst unbekannt, bis der Offset im Live-Rahmen gefunden ist.
+    Der Wechsel von „an" auf „aus" **ist** das Signal „Zieltemperatur
+    erreicht" – erst danach läuft der Schritt-Timer an. Es gibt nur im
+    Rezeptbetrieb eine Vorheizphase; beim manuellen Kochen bleibt der Wert aus.
+
+    Hinweis: Bei Schritten mit einem Ziel oberhalb des Siedepunkts (etwa
+    Dampfgaren mit 120 °C) bleibt er dauerhaft an – der Fühler im Topf sieht
+    nie mehr als 100 °C. Das ist richtig so und kein Fehler.
     """
 
-    _attr_device_class = BinarySensorDeviceClass.OPENING
+    _attr_device_class = BinarySensorDeviceClass.HEAT
+    _attr_icon = "mdi:thermometer-chevron-up"
 
     def __init__(self, live, device_id: str) -> None:
-        super().__init__(live, device_id, "lid")
+        super().__init__(live, device_id, "preheat")
 
     @property
     def is_on(self) -> bool | None:
-        if (st := self.status) is None or st.lid_closed is None:
+        return None if self.status is None else self.status.is_preheat
+
+
+class McLiveScale(McLiveEntity, BinarySensorEntity):
+    """Waagen-Modus aktiv (``extraInfo.cookMode == 17``).
+
+    Das Gewicht selbst überträgt der Dienst nicht – nur, dass gewogen wird.
+    """
+
+    _attr_icon = "mdi:scale"
+
+    def __init__(self, live, device_id: str) -> None:
+        super().__init__(live, device_id, "scale")
+
+    @property
+    def is_on(self) -> bool | None:
+        if (st := self.status) is None:
             return None
-        return not st.lid_closed       # "offen" = an
+        return bool(st.scale_active) or st.cook_mode == "waage"

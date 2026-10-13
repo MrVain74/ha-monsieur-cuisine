@@ -355,3 +355,93 @@ def test_extra_info_mc05_namen_bleiben_gueltig():
     }))
     assert (st.target_temp, st.current_temp, st.error_code) == (90, 44, 3)
     assert (st.speed_raw, st.speed) == (5, 5.0)
+
+
+# --- v0.4.6: Rezeptfelder, Betriebsart (Byte 19), Drehrichtung (Byte 17) ----
+#
+# Alles am Testabend 13.10.2026 live belegt. Byte 19 folgt der GERAETE-Tabelle
+# (DeviceConstants.CookModeConstants), nicht extraInfo.cookMode: Beim Kneten
+# schickte der Dienst cookMode=124 (unbekannt), Byte 19 sagte 5 = kneten.
+
+
+def _mc3_voll(ziel=0, stufe=0, richtung=0, modus=0, minuten=0, sekunden=0) -> str:
+    b = bytearray(38)
+    b[0:7] = bytes.fromhex("aa0025024f4200")
+    b[8], b[9] = 0x08, 0x02
+    b[10], b[16], b[17], b[19] = ziel, stufe, richtung, modus
+    b[26], b[27] = minuten, sekunden
+    return b.hex()
+
+
+@pytest.mark.parametrize("roh,name", [
+    (0, "aus"), (1, "manuell"), (3, "dämpfen"), (5, "kneten"),
+    (4, "braten"), (101, "waage"),
+])
+def test_betriebsart_aus_byte19(roh, name):
+    st = decode_mc3(_mc3_voll(modus=roh))
+    assert (st.device_mode_raw, st.device_mode) == (roh, name)
+
+
+def test_unbekannte_betriebsart_wird_vermerkt():
+    st = decode_mc3(_mc3_voll(modus=99))
+    assert st.device_mode is None
+    assert any("99" in h for h in st.problems)
+
+
+@pytest.mark.parametrize("roh,erwartet", [(0, "rechts"), (1, "links")])
+def test_drehrichtung_aus_byte17(roh, erwartet):
+    assert decode_mc3(_mc3_voll(richtung=roh)).direction == erwartet
+
+
+def test_knetschritt_wie_am_13_10_gemessen():
+    """Flammkuchenteig, Schritt 5: Stufe 4, kein Heizen, Byte 19 = kneten."""
+    st = decode_mc3(_mc3_voll(ziel=0, stufe=8, modus=5, minuten=2))
+    assert st.target_temp is None
+    assert st.speed == 4.0
+    assert st.device_mode == "kneten"
+    assert st.remaining_seconds == 120
+
+
+def test_extra_info_rezeptfelder():
+    st = decode_extra_info(json.dumps({
+        "command": 1, "commandType": "RUNNING", "type": 1, "cookMode": 4,
+        "recipeID": 57325, "recipeName": "Kartoffeln kochen",
+        "recipeImage": "https://example.invalid/bild.jpg",
+        "currentServingSizeId": 1, "stepIndex": 8, "temperature": 120, "speed": 1,
+    }))
+    assert st.recipe_id == 57325
+    assert st.recipe_name == "Kartoffeln kochen"
+    assert st.recipe_image.endswith("bild.jpg")
+    assert st.serving_size_id == 1
+    assert st.step_index == 8
+    assert st.cook_mode == "dämpfen"
+
+
+def test_manueller_betrieb_ohne_rezeptfelder():
+    """Beim manuellen Kochen schickt der Dienst die Rezeptfelder gar nicht."""
+    st = decode_extra_info(json.dumps({"command": 1, "commandType": "RUNNING",
+                                       "type": 2, "cookMode": 3, "recipeID": 0}))
+    assert st.recipe_name is None
+    assert st.recipe_image is None
+    assert st.recipe_id is None
+
+
+def test_vorheizen_wird_uebernommen():
+    st = decode_extra_info(json.dumps({"command": 1, "isPreHeat": True,
+                                       "commandType": "RUNNING"}))
+    assert st.is_preheat is True
+
+
+@pytest.mark.parametrize("ct", ["DONE", "RECIPE_DONE", "STEP_DONE", "STEP_STOP", "PREPARE"])
+def test_am_testabend_beobachtete_zustaende(ct):
+    """Alle diese commandType-Werte kamen am 13.10. wirklich über den Strom."""
+    st = decode_extra_info(json.dumps({"command": 1, "commandType": ct})) 
+    assert st.command_type == ct.lower()
+
+
+def test_byte19_schlaegt_cookmode_124():
+    """Der Rahmen ist hier die bessere Quelle als extraInfo."""
+    st = decode_status(_mc3_voll(stufe=8, modus=5, minuten=2),
+                       json.dumps({"command": 1, "cookMode": 124, "commandType": "RUNNING"}))
+    assert st.device_mode == "kneten"      # aus Byte 19
+    assert st.cook_mode is None            # 124 steht in keiner Tabelle

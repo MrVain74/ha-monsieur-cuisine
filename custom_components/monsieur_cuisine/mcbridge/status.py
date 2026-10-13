@@ -93,6 +93,11 @@ class DeviceLiveStatus:
     lid_closed: bool | None = None
     error_code: int | None = None
     recipe_id: int | None = None
+    recipe_name: str | None = None
+    recipe_image: str | None = None
+    serving_size_id: int | None = None
+    device_mode: str | None = None        # Betriebsart laut Gerät (Byte 19)
+    device_mode_raw: int | None = None
     step_index: int | None = None
     total_step_index: int | None = None
     scale_active: bool | None = None
@@ -246,6 +251,20 @@ APP_COOK_MODE = {
 }
 
 
+# Betriebsart in der **Geräte**-Nummerierung (Byte 19), aus
+# ``DeviceConstants.CookModeConstants`` der Hersteller-App. Nicht mit
+# ``extraInfo.cookMode`` verwechseln – das ist die App-Nummerierung (siehe
+# APP_COOK_MODE). Live belegt am 13.10.2026: 1 (manuell), 3 (dämpfen),
+# 5 (kneten) und 0 (nichts gesetzt).
+DEVICE_MODE = {
+    0: "aus", 1: "manuell", 3: "dämpfen", 4: "braten", 5: "kneten",
+    6: "warmhalten", 8: "kochen", 9: "sous-vide", 16: "auftauen", 101: "waage",
+}
+
+MC3_OFF_DIRECTION = 17   # 0 = Rechtslauf, 1 = Linkslauf (Verdacht, s. Befund)
+MC3_OFF_DEVICE_MODE = 19
+
+
 def decode_target_temp(index: int) -> int | None:
     """Ziel-Temperatur des MC3.0: ein **Index**, keine Gradzahl.
 
@@ -278,6 +297,14 @@ def decode_mc3(frame_hex: str) -> DeviceLiveStatus:
     # Halbstufen: der Rohwert ist das Doppelte der angezeigten Stufe.
     st.speed_raw = raw[MC3_OFF_SPEED]
     st.speed = raw[MC3_OFF_SPEED] / 2
+    if len(raw) > MC3_OFF_DEVICE_MODE:
+        rohmodus = raw[MC3_OFF_DEVICE_MODE]
+        st.device_mode_raw = rohmodus
+        st.device_mode = DEVICE_MODE.get(rohmodus)
+        if st.device_mode is None:
+            st.problems = st.problems + (f"unbekannte Betriebsart {rohmodus}",)
+    if len(raw) > MC3_OFF_DIRECTION:
+        st.direction = "links" if raw[MC3_OFF_DIRECTION] else "rechts"
     minuten, sekunden = raw[MC3_OFF_REMAIN_MIN], raw[MC3_OFF_REMAIN_SEC]
     if sekunden > 59:
         st.problems = st.problems + (f"Sekundenbyte {sekunden} > 59",)
@@ -360,6 +387,14 @@ def decode_extra_info(extra_info: str) -> DeviceLiveStatus:
     # verwerfen nichts, vermerken es aber – sonst rätselt man im Log.
     if isinstance(v := d.get("command"), int) and v != 1:
         st.problems = st.problems + (f"extraInfo command={v} (App wertet nur 1 aus)",)
+
+    # Rezeptbetrieb: diese Felder schickt der Dienst nur bei ``type == 1``.
+    if isinstance(v := d.get("recipeName"), str) and v:
+        st.recipe_name = v
+    if isinstance(v := d.get("recipeImage"), str) and v:
+        st.recipe_image = v
+    if isinstance(v := d.get("currentServingSizeId"), int) and v > 0:
+        st.serving_size_id = v
 
     if isinstance(v := d.get("recipeID"), int) and v > 0:
         st.recipe_id = v

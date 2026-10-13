@@ -4,6 +4,54 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.6] – 2026-10-13
+### Entfernt – diese Werte gibt die Cloud nicht her
+Am Testabend mit dem echten Gerät gemessen (vier Mitschnitte, 150 Frames):
+- **Ist-Temperatur**: 2 Minuten Heizen von kalt auf 100 °C – kein Byte wandert
+  mit, kein Feld in `extraInfo`. Auch der Griff „Ziel 130 → 65 °C bei kochendem
+  Topf" (Heizung zwangsweise aus) änderte nichts.
+- **Deckel**: nicht übertragen. Selbst PAUSE und STOP stehen nicht im Rahmen.
+- **Fehlercode**: „Topf zu heiß" stand auf dem Display, das Gerät kochte weiter,
+  `commandType` blieb `RUNNING` – kein Feld, kein Byte.
+
+Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
+
+### Neu
+- **Betriebsart** (`sensor`): aus **Byte 19** des Rahmens, das der
+  Geräte-Nummerierung folgt (`DeviceConstants.CookModeConstants`). Live belegt:
+  1 manuell, 3 dämpfen, 5 kneten. Hier ist der Rahmen die **bessere** Quelle –
+  beim Kneten schickte der Dienst `extraInfo.cookMode = 124`, einen Wert ohne
+  Tabelle, während Byte 19 klar „kneten" sagte. Bei Rezepten wechselt die
+  Betriebsart pro Schritt.
+- **Rezept** (`sensor`): Name des laufenden Rezepts, mit Rezept-ID, Bild-URL und
+  Portionsgröße als Attribute. Diese Felder schickt der Dienst nur im
+  Rezeptbetrieb (`type == 1`).
+- **Schritt** (`sensor`): Nummer des laufenden Rezeptschritts.
+- **Vorheizen** (`binary_sensor`): aus `isPreHeat`. Der Wechsel von an auf aus
+  **ist** das Signal „Zieltemperatur erreicht" – erst danach läuft der
+  Schritt-Timer. Es gibt nur im Rezeptbetrieb eine Vorheizphase.
+- **Waage** (`binary_sensor`): `cookMode == 17`. Das Gewicht überträgt der
+  Dienst nicht, nur die Tatsache, dass gewogen wird.
+- **Drehrichtung** als Attribut der Betriebsart, aus Byte 17 (im Knetprogramm
+  wechselt es – Deutung als Linkslauf noch zu bestätigen).
+
+### Hinweise für Automatisierungen
+- Fertig-Meldung: auf `done` oder `recipe_done` hören, **nicht** auf
+  `step_done` – sonst meldet es jeden Zwischenschritt. Beobachtet wurden
+  `PREPARE`, `START`, `RUNNING`, `PAUSE`, `RESUME`, `STOP`, `DONE`,
+  `STEP_DONE`, `STEP_STOP`, `RECIPE_DONE`.
+- Zustandswechsel kommen in 1–2 s als Ereignis, dazwischen alle 10 s ein
+  Herzschlag. Nach `DONE` endet der Strom.
+- „Vorheizen" bleibt bei Zielen über dem Siedepunkt dauerhaft an (Dampfgaren
+  mit 120 °C: der Fühler sieht nie mehr als 100 °C). Das ist korrekt.
+- Im Knetprogramm schwankt die Stufe im Intervall zwischen 0 und 4.
+
+### Tests
+- 19 neue Fälle: Betriebsart aus Byte 19 (inkl. unbekannter Wert), Drehrichtung,
+  der gemessene Knetschritt, Rezeptfelder, manueller Betrieb ohne Rezeptfelder,
+  alle beobachteten Zustände, und dass Byte 19 den unbrauchbaren
+  `cookMode = 124` schlägt. Gesamt **145 Tests**.
+
 ## [0.4.5] – 2026-10-13
 ### Behoben
 - **Live-Status erholt sich nach langer Geräte-Pause von allein.** Beim
