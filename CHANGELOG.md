@@ -4,6 +4,32 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.5] – 2026-10-13
+### Behoben
+- **Live-Status erholt sich nach langer Geräte-Pause von allein.** Beim
+  Live-Test am 13.10. standen die Sensoren still: Werte eingefroren seit Stunden,
+  Cloud-Verbindung „off", und erst ein Neuladen der Integration brachte sie
+  zurück. Ursache war **nicht** das Gerät (es war tagelang aus und wurde erst zum
+  Test eingeschaltet), sondern der Live-Strom:
+  * **Kein Keepalive am gRPC-Kanal.** Liegt der Strom lange still (Gerät aus),
+    kann die TCP-Verbindung unbemerkt sterben (NAT-/Idle-Timeout). Der Client
+    merkte das nie – `async for` hing für immer, der Reconnect lief nie wieder an.
+    Jetzt sendet der Kanal Keepalive-Pings; eine tote Verbindung fällt als Fehler
+    auf und wird neu aufgebaut.
+  * **Reconnect holte keinen frischen JWT.** `token()` erneuerte nur, wenn der
+    Token fehlt, nicht wenn er abgelaufen ist – ein Neuaufbau wäre mit totem
+    Token ins Leere gelaufen. Vor jedem Neuaufbau wird jetzt ein frischer Token
+    erzwungen (der allererste Verbindungsaufbau nutzt den gespeicherten weiter).
+  * **Watchdog.** Kommt über `LIVE_WATCHDOG` (15 min) keine Meldung, wird der
+    Strom mit frischem Token neu aufgebaut – Sicherheitsnetz zusätzlich zum
+    Keepalive. Ein sauberes Strom-Ende zieht die Wartezeit nicht hoch; nur echte
+    Fehler laufen in die wachsende Backoff-Zeit.
+
+### Tests
+- Neu: `tests/test_live_reconnect.py` – Keepalive-Optionen am Kanal, Watchdog
+  baut neu auf und erzwingt dabei einen frischen Token, normale Meldung wird
+  verarbeitet. Gesamt **126 Tests**.
+
 ## [0.4.4] – 2026-10-13
 ### Hinzugefügt
 - **Erneute Anmeldung (Reauth) ohne Löschen.** Wird die gespeicherte Sitzung

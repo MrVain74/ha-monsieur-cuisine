@@ -21,6 +21,7 @@ from .const import (
     LIVE_RETRY_MAX,
     LIVE_RETRY_START,
     LIVE_STALE_AFTER,
+    LIVE_WATCHDOG,
     PLANNER_WINDOW_DAYS,
     UPDATE_INTERVAL,
 )
@@ -133,23 +134,63 @@ class McLiveCoordinator(DataUpdateCoordinator[DeviceLiveStatus | None]):
 
     async def _laufen(self) -> None:
         wartezeit = LIVE_RETRY_START
+        erster = True
         while True:
+            sauber = False  # Strom ging normal zu Ende (kein Fehler)
+            agen = None
             try:
+                # Vor jedem **Neu**aufbau einen frischen JWT erzwingen. Sonst
+                # liefe der Strom nach langer Geräte-Pause mit abgelaufenem Token
+                # ins Leere (``token()`` erneuert von sich aus nur, wenn der
+                # Token fehlt, nicht wenn er abgelaufen ist). Beim allerersten
+                # Verbinden nutzen wir den gespeicherten Token unverändert.
+                if not erster:
+                    self._auth.access_token = None
                 token = await self._auth.token()
+                erster = False
                 _LOGGER.debug("MC-Live: verbinde mit %s", GRPC_HOST)
-                async for meldung in stream_device_status(
+                agen = stream_device_status(
                     token, int(self._auth.user_id or 0), self._auth.companion_app_id
-                ):
+                ).__aiter__()
+                while True:
+                    # Watchdog: Kommt zu lange nichts, bauen wir neu auf (mit
+                    # frischem Token). Zusammen mit dem Keepalive am Kanal fängt
+                    # das stillgelegte Verbindungen ab, die sich nach langer
+                    # Geräte-Pause sonst nie von selbst erholen.
+                    try:
+                        meldung = await asyncio.wait_for(
+                            agen.__anext__(), timeout=LIVE_WATCHDOG.total_seconds()
+                        )
+                    except StopAsyncIteration:
+                        _LOGGER.debug("MC-Live: Strom regulär beendet")
+                        sauber = True
+                        break
+                    except asyncio.TimeoutError:
+                        _LOGGER.debug(
+                            "MC-Live: %s ohne Meldung → Neuaufbau mit frischem Token",
+                            LIVE_WATCHDOG,
+                        )
+                        sauber = True
+                        break
                     self._verarbeiten(meldung)
                     wartezeit = LIVE_RETRY_START
-                _LOGGER.debug("MC-Live: Strom regulär beendet")
             except asyncio.CancelledError:
                 raise
             except Exception as err:  # noqa: BLE001 – Strom darf nie HA mitnehmen
                 _LOGGER.debug("MC-Live: Strom abgebrochen: %s", err)
+            finally:
+                if agen is not None:
+                    with suppress(Exception):
+                        await agen.aclose()
             self.connected = False
+            # Ein sauberes Ende (Watchdog/Stream-Ende) ist kein Fehler: kurz
+            # warten und neu verbinden, ohne die Wartezeit hochzuziehen. Nur
+            # echte Fehler laufen in die wachsende Wartezeit.
+            if sauber:
+                wartezeit = LIVE_RETRY_START
             await asyncio.sleep(wartezeit)
-            wartezeit = min(wartezeit * 2, LIVE_RETRY_MAX)
+            if not sauber:
+                wartezeit = min(wartezeit * 2, LIVE_RETRY_MAX)
 
     @callback
     def _verarbeiten(self, meldung: DeviceStatus) -> None:

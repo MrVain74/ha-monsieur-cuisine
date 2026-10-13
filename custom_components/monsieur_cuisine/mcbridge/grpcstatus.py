@@ -26,6 +26,18 @@ METHOD_LOGIN_DEVICE_STATUS = (
     "/com.tecpal.grpc.status.server.StatusService/loginDeviceStatus"
 )
 
+# Keepalive am Kanal: Der Strom liegt oft stundenlang still da (Gerät aus).
+# Ohne Keepalive kann die TCP-Verbindung dabei still sterben (NAT-/Idle-Timeout),
+# ohne dass der Client es merkt – dann hängt ``async for`` für immer und der
+# Reconnect läuft nie wieder an. Mit regelmäßigen Pings fällt eine tote
+# Verbindung als Fehler auf, der Strom endet, und der Aufrufer baut neu auf.
+_CHANNEL_OPTIONS = [
+    ("grpc.keepalive_time_ms", 60_000),           # alle 60 s ein Ping
+    ("grpc.keepalive_timeout_ms", 20_000),        # 20 s auf die Antwort warten
+    ("grpc.keepalive_permit_without_calls", 1),   # auch ohne aktive Nachricht
+    ("grpc.http2.max_pings_without_data", 0),     # Pings ohne Daten erlauben
+]
+
 # Wie sich die App beim Dienst vorstellt. Bewusst als HA erkennbar.
 COMPANION_APP_NAME = "ha-monsieur-cuisine"
 COMPANION_APP_MODEL = "HomeAssistant"
@@ -159,7 +171,9 @@ async def stream_device_status(token: str, user_id: int, companion_app_id: str,
     metadaten = (("authorization", f"Bearer {token}"),
                  ("x-request-id", str(uuid.uuid4())))
 
-    async with grpc.aio.secure_channel(host, grpc.ssl_channel_credentials()) as kanal:
+    async with grpc.aio.secure_channel(
+        host, grpc.ssl_channel_credentials(), options=_CHANNEL_OPTIONS
+    ) as kanal:
         aufruf = kanal.unary_stream(
             METHOD_LOGIN_DEVICE_STATUS,
             request_serializer=lambda roh: roh,      # schon Bytes

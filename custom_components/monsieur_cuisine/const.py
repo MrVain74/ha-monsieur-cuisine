@@ -30,6 +30,12 @@ LIVE_RETRY_MAX = 300
 # Nach so langer Stille gilt der Live-Status als veraltet (das Gerät schaltet
 # sich selbst ab, dann kommt einfach nichts mehr).
 LIVE_STALE_AFTER = timedelta(minutes=10)
+# Kommt so lange keine Meldung, bauen wir den Strom mit frischem Token neu auf.
+# Sicherheitsnetz zusätzlich zum Keepalive: fängt den Fall ab, dass die
+# Verbindung zwar lebt, der Dienst aber nach langer Geräte-Pause nichts mehr
+# schickt. Großzügig gewählt, damit ein ruhender Strom nicht ständig neu
+# aufgebaut wird.
+LIVE_WATCHDOG = timedelta(minutes=15)
 
 SERVICE_SEND_RECIPE = "send_recipe"
 ATTR_URL = "url"
