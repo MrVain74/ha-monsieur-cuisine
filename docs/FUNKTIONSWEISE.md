@@ -74,7 +74,8 @@ Beide werden in ruhigem Abstand (alle 30 Minuten) aus dem Konto gelesen:
 Der Nutzer meldet sich einmalig bei Lidl an (die Zugangsdaten und das Captcha
 bleiben zwischen Nutzer und Lidl). Aus diesem Login gewinnt die Integration den
 Sitzungstoken der Hersteller-Cloud und erneuert ihn selbstständig; ein erneuter
-Lidl-Login ist im Normalbetrieb nicht nötig. Drei Anmeldewege stehen bereit –
+Lidl-Login ist im Normalbetrieb nicht nötig. Der Login läuft über einen kleinen
+Browser-Helfer, der den Anmelde-Code abfängt und an Home Assistant übergibt –
 siehe [`EINRICHTUNG.md`](EINRICHTUNG.md). Das Captcha wird nie umgangen.
 
 ## Rezepte

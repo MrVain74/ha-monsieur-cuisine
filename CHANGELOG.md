@@ -4,6 +4,25 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.3] – 2026-10-13
+### Dokumentation
+- **Nutzer-Doku von erledigten Entwicklungsthemen bereinigt.** In `README.md`,
+  `docs/EINRICHTUNG.md` und `docs/FUNKTIONSWEISE.md` standen noch Hinweise auf
+  inzwischen gelöste Probleme und entfernte Anmeldewege. Wer über HACS neu
+  installiert, bekommt immer die aktuelle Version; solche Versions-Notizen
+  gehören in diesen Änderungsverlauf, nicht in die Anleitung.
+  - `EINRICHTUNG.md`: die beiden historischen Login-Fehler (Dialog-Hänger bis
+    v0.3.2/0.3.3, Doppel-Einlösung `invalid_grant` v0.3.3) aus „Problemlösung"
+    entfernt – die vier aktuellen Symptom-Punkte bleiben. „In Arbeit: Live-Status"
+    entfernt (ist deployt). „Was du bekommst" um **Live-Status** (Kochzustand,
+    Temperaturen, Stufe, Restzeit, Fehlercode, Deckel), **Einkaufsliste** (To-do)
+    und **Wochenplaner** (Kalender) ergänzt. Verweis auf die bis 0.3.9 entfernten
+    Anmeldewege gestrichen.
+  - `README.md`: Status auf v0.4.3; Satz über die in 0.4.0 entfernten Wege
+    (Lesezeichen/manuell) gestrichen – die Begründung für den einen Weg bleibt.
+  - `FUNKTIONSWEISE.md`: „Drei Anmeldewege" → der eine Weg über den Browser-Helfer.
+- Keine Code-Änderung; **114 Tests** unverändert grün.
+
 ## [0.4.2] – 2026-10-13
 ### Behoben
 - **Die Lidl-Anmeldung öffnete sich beim Hinzufügen sofort**, ohne Vorab-Hinweis

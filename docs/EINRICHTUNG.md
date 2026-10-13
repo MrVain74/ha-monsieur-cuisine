@@ -32,8 +32,7 @@ Helfers ohne Klick durch.
 > Assistant weiterreichen – in Chrome nachgemessen: die Weiterleitung wird
 > **stillschweigend verworfen**, die Adresse erscheint nirgends, auch nicht in
 > der Adressleiste. Abfangen kann sie daher nur etwas, das *neben* der Seite
-> mitlesen darf. Wege über ein Lesezeichen und über manuelles Einfügen gab es
-> bis Version 0.3.9; sie waren in Chrome nicht zuverlässig und sind entfallen.
+> mitlesen darf – deshalb der kleine Browser-Helfer.
 
 1. Einmalig den **Browser-Helfer** installieren – Anleitung in
    [`../browser-helper/README.md`](../browser-helper/README.md), etwa eine Minute.
@@ -50,12 +49,16 @@ und sonst nichts. Passwort und Captcha bleiben vollständig bei dir und bei Lidl
 
 ## 4. Was du bekommst
 - **Gerät „Monsieur Cuisine Smart"** mit:
+  - **Live-Status beim Kochen** (MC Smart): Kochzustand, Ist-/Ziel-Temperatur,
+    Stufe, Restzeit, Fehlercode (Diagnose) und Deckel. Während das Gerät aus ist,
+    stehen die Live-Sensoren auf „nicht verfügbar".
   - Diagnose **Cloud-Verbindung** (verbunden/getrennt).
   - Sensor **Eigene Rezepte** (Anzahl).
+- **Einkaufsliste** als To-do-Liste und **Wochenplaner** als Kalender aus deinem
+  Konto (vorerst nur lesend).
 - **Aktion „Rezept an Monsieur Cuisine senden"** (`monsieur_cuisine.send_recipe`):
   wandelt eine Rezept-Webseite (schema.org, z. B. Chefkoch/Mealie) in ein Gerät-Rezept
   mit Maschinenschritten um.
-- *(In Arbeit: Live-Status beim Kochen – Zustand, Zieltemperatur, Stufe, Restzeit; zunächst für den MC Smart.)*
 
 ## Problemlösung
 - **„Anmeldung fehlgeschlagen":** Der `code` gilt nur kurz. Den Dialog abbrechen
@@ -65,15 +68,6 @@ und sonst nichts. Passwort und Captcha bleiben vollständig bei dir und bei Lidl
 - **„Verbindung fehlgeschlagen":** Netz/Cloud gerade nicht erreichbar – später erneut.
 - **Gerät zeigt „getrennt":** Der Monsieur meldet sich nach kurzer Zeit selbst von der Cloud ab
   (Stromsparen). Beim Kochen ist er verbunden.
-- **Dialog hängt, obwohl die Seite „Angemeldet" zeigte** (Fehler bis v0.3.2):
-  Der Code kam an, aber Home Assistant schloss den Vorgang nicht ab. Seit v0.3.3
-  schließt die Empfangs-Adresse selbst ab, auch wenn der Dialog nicht mehr offen
-  ist.
-- **„Anmeldung fehlgeschlagen (der Code gilt nur kurz)", obwohl die Anmeldung
-  gerade erst lief** (Fehler in v0.3.3): Dialog und Empfangs-Adresse lösten den
-  Einmal-Code gleichzeitig ein; Lidl gibt ihn nur einmal her, der zweite Versuch
-  endete mit `invalid_grant`. Ab v0.3.4 wird genau einmal eingelöst. Bitte auf
-  v0.3.4 aktualisieren.
 
 ## Datenschutz
 - Es werden **keine Zugangsdaten** gespeichert – nur die Sitzungs-Tokens der Cloud (im HA-Eintrag).

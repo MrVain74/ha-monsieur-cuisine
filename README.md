@@ -4,7 +4,7 @@
 > cloud interface of the Monsieur Cuisine app. May break at any time if the vendor changes things.
 > For your own account only, gentle polling (max. 1 request/second, every 15 minutes).
 
-**Status: Alpha (v0.3.8)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
+**Status: Alpha (v0.4.3)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
 👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) · **Funktionsweise:** [`docs/FUNKTIONSWEISE.md`](docs/FUNKTIONSWEISE.md)
 
@@ -93,9 +93,6 @@ read alongside the page can catch it, so there is **one** sign-in path:
   [`browser-helper/`](browser-helper/) catches the redirect and hands the code to
   Home Assistant. The setup dialog then finishes on its own – not even a click.
   The add-on may only read redirects from `accounts.lidl.com` and nothing else.
-
-Earlier attempts via a bookmark (`response_mode=form_post`) and via pasting the
-code by hand were unreliable in Chrome and were removed in 0.4.0.
 
 Your e-mail, password and the captcha always stay between you and Lidl; the
 captcha is never bypassed.
