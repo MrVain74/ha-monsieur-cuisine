@@ -4,6 +4,46 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.3.5] – 2026-10-13
+### Neu
+- **Live-Status beim Kochen (Push über gRPC).** `McLiveCoordinator` abonniert
+  `loginDeviceStatus` auf `mc-grpc.tecpal.com`, hält den Strom offen, verbindet
+  mit wachsender Wartezeit neu (5 s → 5 min) und holt den JWT vor jedem Versuch
+  frisch. Kein Abrufintervall – jede Meldung wird durchgeschoben. Nur Geräte des
+  Modells **MC3.0** werden gedeutet; andere Modelle werden einmal gemeldet und
+  übersprungen.
+- **Neue Entitäten** am bekannten Gerät: Kochzustand, Ist-Temperatur,
+  Ziel-Temperatur, Stufe, Restzeit (mit `zeitmodus` countdown/stoppuhr sowie
+  Gesamt- und verstrichener Zeit als Attribute), Fehlercode (Diagnose) und
+  Deckel (Binärsensor).
+- `mcbridge/status.proto` liegt jetzt in der Integration; `grpcio` ist als
+  Anforderung im Manifest eingetragen.
+
+### Geändert
+- `mcbridge/status.py` versteht jetzt **beide** Statusformen: den TLV-Rahmen der
+  MC05-Kette (unverändert) **und** den festen MC3.0-Rahmen aus dem Live-Strom,
+  dazu `extraInfo` als strukturierte und bevorzugte Quelle. `decode_status`
+  entscheidet anhand des Inhalts, verschmilzt beide Quellen und **wirft nie** –
+  was schieflief, steht in `problems`, woher ein Wert kommt, in `sources`.
+- Erkenntnis aus dem APK: Die Ziel-Temperatur des MC3.0 ist ein **Index**
+  (0 = aus, 1 = 37 °C, ab 2 in Fünferschritten von 40 °C) – damit erklärt sich
+  der Sonderfall 37 °C. Zeiten stehen in `extraInfo` in **Millisekunden**, im
+  TLV-Rahmen in Sekunden.
+
+### Offen (mit Live-Mitschnitt zu bestätigen)
+- Startkennung des MC3.0-Rahmens (`AA 00 …` statt `5A A5`) und ob die Stufe
+  wirklich halbiert werden muss – der Rohwert steht als Attribut `rohwert` am
+  Stufen-Sensor.
+- Der Deckel kommt bisher nur aus dem TLV-Rahmen (Tag 0x0209); in `extraInfo`
+  fehlt er, der Offset im MC3.0-Rahmen ist noch unbekannt. Bis dahin bleibt der
+  Binärsensor unbestimmt.
+
+### Tests
+- Neu: `tests/test_live_status.py` – protobuf-Codec (gegen die offizielle
+  Serialisierung geprüft: byte-identisch), MC3.0-Rahmen, Temperatur-Index,
+  `extraInfo`, die Weiche und die Gesamtkette vom Draht bis zum Status.
+  Gesamt **91 Tests**.
+
 ## [0.3.4] – 2026-10-13
 ### Behoben
 - **Login schließt jetzt zuverlässig ab (kein `invalid_grant` mehr).** Nach dem

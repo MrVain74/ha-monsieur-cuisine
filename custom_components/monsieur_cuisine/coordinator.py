@@ -1,16 +1,29 @@
-"""Regelmäßiger Abruf von Gerät und Rezeptanzahl."""
+"""Regelmäßiger Abruf von Gerät und Rezeptanzahl, plus Live-Status (Push)."""
 from __future__ import annotations
 
+import asyncio
 import logging
+from contextlib import suppress
+from datetime import datetime
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util.dt import utcnow
 
-from .const import DOMAIN, UPDATE_INTERVAL
+from .const import (
+    DOMAIN,
+    LIVE_MODEL,
+    LIVE_RETRY_MAX,
+    LIVE_RETRY_START,
+    LIVE_STALE_AFTER,
+    UPDATE_INTERVAL,
+)
 from .mcbridge.client import McApiError, McAuthError, McClient
+from .mcbridge.grpcstatus import GRPC_HOST, DeviceStatus, stream_device_status
+from .mcbridge.status import DeviceLiveStatus, decode_status
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -32,3 +45,98 @@ class McCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "devices": {d.get("id"): d for d in devices},
             "own_recipes": recipes.get("total", 0),
         }
+
+
+class McLiveCoordinator(DataUpdateCoordinator[DeviceLiveStatus | None]):
+    """Live-Status des Geräts – Push über den gRPC-Strom, kein Abrufintervall.
+
+    ``loginDeviceStatus`` ist ein Server-Stream: der Dienst schickt bei jeder
+    Zustandsänderung eine Meldung. Deshalb kein ``update_interval``, sondern
+    eine Hintergrundaufgabe, die den Strom offen hält und jede Meldung per
+    ``async_set_updated_data`` an die Entitäten weitergibt.
+
+    Der Strom endet regelmäßig von allein – spätestens wenn der JWT abläuft
+    oder das Gerät sich abschaltet. Darum wird mit wachsender Wartezeit neu
+    verbunden und der Token vor jedem Versuch frisch geholt.
+    """
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, auth: Any) -> None:
+        super().__init__(hass, _LOGGER, name=f"{DOMAIN}_live", config_entry=entry)
+        self._auth = auth
+        self._task: asyncio.Task | None = None
+        self.connected = False
+        self.device_id: str | None = None
+        self.device_model: str | None = None
+        self.last_event: datetime | None = None
+        self._fremde_modelle: set[str] = set()
+
+    @callback
+    def async_start(self) -> None:
+        """Hintergrundaufgabe starten (wird mit dem Config-Entry beendet)."""
+        if self._task is None and self.config_entry is not None:
+            self._task = self.config_entry.async_create_background_task(
+                self.hass, self._laufen(), name=f"{DOMAIN}_live_stream"
+            )
+
+    async def async_stop(self) -> None:
+        if self._task is not None:
+            self._task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._task
+            self._task = None
+
+    @property
+    def stale(self) -> bool:
+        """Kam schon länger nichts mehr? Dann ist der Wert nicht mehr frisch."""
+        if self.last_event is None:
+            return True
+        return utcnow() - self.last_event > LIVE_STALE_AFTER
+
+    async def _laufen(self) -> None:
+        wartezeit = LIVE_RETRY_START
+        while True:
+            try:
+                token = await self._auth.token()
+                _LOGGER.debug("MC-Live: verbinde mit %s", GRPC_HOST)
+                async for meldung in stream_device_status(
+                    token, int(self._auth.user_id or 0), self._auth.companion_app_id
+                ):
+                    self._verarbeiten(meldung)
+                    wartezeit = LIVE_RETRY_START
+                _LOGGER.debug("MC-Live: Strom regulär beendet")
+            except asyncio.CancelledError:
+                raise
+            except Exception as err:  # noqa: BLE001 – Strom darf nie HA mitnehmen
+                _LOGGER.debug("MC-Live: Strom abgebrochen: %s", err)
+            self.connected = False
+            await asyncio.sleep(wartezeit)
+            wartezeit = min(wartezeit * 2, LIVE_RETRY_MAX)
+
+    @callback
+    def _verarbeiten(self, meldung: DeviceStatus) -> None:
+        """Eine Meldung deuten und an die Entitäten geben."""
+        self.device_id = meldung.device_id or self.device_id
+        self.device_model = meldung.device_model or self.device_model
+        self.connected = meldung.connected
+        self.last_event = utcnow()
+
+        # Modell-Schranke: nur der MC3.0 liefert einen Rahmen, den wir deuten
+        # können. Andere Modelle werden einmal gemeldet und dann ignoriert.
+        modell = meldung.device_model or ""
+        if modell and LIVE_MODEL not in modell:
+            if modell not in self._fremde_modelle:
+                self._fremde_modelle.add(modell)
+                _LOGGER.info(
+                    "MC-Live: Modell %s wird übersprungen (gedeutet wird nur %s)",
+                    modell, LIVE_MODEL,
+                )
+            return
+
+        status = decode_status(meldung.hex_command or None, meldung.extra_info or None)
+        _LOGGER.debug(
+            "MC-Live: Quellen=%s Zustand=%s Ist=%s Ziel=%s Stufe=%s Rest=%s%s",
+            status.sources, status.command_type, status.current_temp,
+            status.target_temp, status.speed, status.remaining_seconds,
+            f" Probleme={status.problems}" if status.problems else "",
+        )
+        self.async_set_updated_data(status)

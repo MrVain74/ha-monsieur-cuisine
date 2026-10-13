@@ -41,11 +41,32 @@
     "binary_sensor": {
       "cloud_connection": {
         "name": "Cloud-Verbindung"
+      },
+      "lid": {
+        "name": "Deckel"
       }
     },
     "sensor": {
       "own_recipes": {
         "name": "Eigene Rezepte"
+      },
+      "cook_state": {
+        "name": "Kochzustand"
+      },
+      "current_temperature": {
+        "name": "Ist-Temperatur"
+      },
+      "target_temperature": {
+        "name": "Ziel-Temperatur"
+      },
+      "speed": {
+        "name": "Stufe"
+      },
+      "remaining_time": {
+        "name": "Restzeit"
+      },
+      "error_code": {
+        "name": "Fehlercode"
       }
     }
   },

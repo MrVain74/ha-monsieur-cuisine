@@ -12,6 +12,17 @@ CONF_REFRESH_TOKEN = "refresh_token"  # alt (v1), nur zur Abwärtskompatibilitä
 
 UPDATE_INTERVAL = timedelta(minutes=15)
 
+# Live-Status über gRPC (Push, kein Abruf-Intervall)
+DATA_LIVE = "live"
+# Nur dieses Modell liefert einen Rahmen, den wir deuten können.
+LIVE_MODEL = "MC3.0"
+# Wiederverbinden mit wachsender Wartezeit (Sekunden)
+LIVE_RETRY_START = 5
+LIVE_RETRY_MAX = 300
+# Nach so langer Stille gilt der Live-Status als veraltet (das Gerät schaltet
+# sich selbst ab, dann kommt einfach nichts mehr).
+LIVE_STALE_AFTER = timedelta(minutes=10)
+
 SERVICE_SEND_RECIPE = "send_recipe"
 ATTR_URL = "url"
 ATTR_RECIPE = "recipe"

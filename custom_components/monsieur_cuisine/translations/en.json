@@ -41,11 +41,32 @@
     "binary_sensor": {
       "cloud_connection": {
         "name": "Cloud connection"
+      },
+      "lid": {
+        "name": "Lid"
       }
     },
     "sensor": {
       "own_recipes": {
         "name": "Own recipes"
+      },
+      "cook_state": {
+        "name": "Cooking state"
+      },
+      "current_temperature": {
+        "name": "Current temperature"
+      },
+      "target_temperature": {
+        "name": "Target temperature"
+      },
+      "speed": {
+        "name": "Speed"
+      },
+      "remaining_time": {
+        "name": "Remaining time"
+      },
+      "error_code": {
+        "name": "Error code"
       }
     }
   },

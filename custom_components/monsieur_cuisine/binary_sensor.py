@@ -7,13 +7,22 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
-from .entity import McDeviceEntity
+from .const import DATA_LIVE, DOMAIN, LIVE_MODEL
+from .entity import McDeviceEntity, McLiveEntity
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
-    coordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
-    add(McCloudConnection(coordinator, dev_id) for dev_id in coordinator.data["devices"])
+    daten = hass.data[DOMAIN][entry.entry_id]
+    coordinator = daten["coordinator"]
+    live = daten[DATA_LIVE]
+
+    entities: list[BinarySensorEntity] = [
+        McCloudConnection(coordinator, dev_id) for dev_id in coordinator.data["devices"]
+    ]
+    for dev_id, dev in coordinator.data["devices"].items():
+        if LIVE_MODEL in (dev.get("modelName") or ""):
+            entities.append(McLiveLid(live, dev_id))
+    add(entities)
 
 
 class McCloudConnection(McDeviceEntity, BinarySensorEntity):
@@ -34,3 +43,23 @@ class McCloudConnection(McDeviceEntity, BinarySensorEntity):
     @property
     def is_on(self) -> bool:
         return self.device.get("iotConnectionStatus") == "CONNECT"
+
+
+class McLiveLid(McLiveEntity, BinarySensorEntity):
+    """Deckel offen oder geschlossen.
+
+    Hinweis: Dieses Feld liefert bisher nur der TLV-Rahmen (Tag 0x0209); in
+    ``extraInfo`` kommt es nicht vor. Beim MC3.0 bleibt der Wert daher
+    vorerst unbekannt, bis der Offset im Live-Rahmen gefunden ist.
+    """
+
+    _attr_device_class = BinarySensorDeviceClass.OPENING
+
+    def __init__(self, live, device_id: str) -> None:
+        super().__init__(live, device_id, "lid")
+
+    @property
+    def is_on(self) -> bool | None:
+        if (st := self.status) is None or st.lid_closed is None:
+            return None
+        return not st.lid_closed       # "offen" = an

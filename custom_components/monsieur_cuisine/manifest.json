@@ -7,6 +7,6 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/MrVain74/ha-monsieur-cuisine/issues",
-  "requirements": [],
-  "version": "0.3.4"
+  "requirements": ["grpcio>=1.60.0"],
+  "version": "0.3.5"
 }

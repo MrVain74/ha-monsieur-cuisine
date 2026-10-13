@@ -1,0 +1,29 @@
+syntax = "proto3";
+package com.tecpal.grpc.status.server;
+
+message InOutRequest {
+  int64  userId            = 1;
+  string companionAppId    = 2;
+  string companionAppModel = 3;
+  string companionAppName  = 4;
+}
+
+message DeviceStatusResponse {
+  int64  userId              = 1;
+  string deviceId            = 2;
+  string hexCommand          = 3;
+  int64  eventTimestamp      = 4;
+  string iotConnectionStatus = 5;
+  string appConnectingId     = 6;
+  string extraInfo           = 7;
+  string deviceCustomName    = 8;
+  string deviceModel         = 9;
+  int64  deviceType          = 10;
+}
+
+message Empty {}
+
+service StatusService {
+  rpc loginDeviceStatus (InOutRequest) returns (stream DeviceStatusResponse);
+  rpc pushDeviceStatus  (DeviceStatusResponse) returns (Empty);
+}

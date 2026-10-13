@@ -95,7 +95,12 @@ class DeviceLiveStatus:
     recipe_id: int | None = None
     step_index: int | None = None
     total_step_index: int | None = None
+    scale_active: bool | None = None
+    turbo_active: bool | None = None
     tags: dict[int, bytes] = field(default_factory=dict)
+    # Diagnose: welche Quellen beigetragen haben und was dabei auffiel.
+    sources: tuple[str, ...] = ()
+    problems: tuple[str, ...] = ()
 
 
 def extract_main(hex_command: str) -> str:
@@ -210,3 +215,190 @@ def decode_main(main_hex: str) -> DeviceLiveStatus:
 def decode_hexcommand(hex_command: str) -> DeviceLiveStatus:
     """Bequemlichkeit: ``hexCommand``-JSON → DeviceLiveStatus."""
     return decode_main(extract_main(hex_command))
+
+
+# =============================================================================
+# MC3.0: fester Rahmen + extraInfo (Live-Status über gRPC)
+# =============================================================================
+#
+# Der TLV-Teil oben stammt aus der MC05-Kette der Hersteller-App
+# (``lf.a`` heißt dort wörtlich MC05ChainFactory). Der Live-Strom des
+# **MC3.0** sieht anders aus: ``DeviceStatusResponse.hexCommand`` ist dort ein
+# **roher Hex-String mit festem Aufbau** (Kopf ``AA 00 25 02 …``, 38 Byte) und
+# kein JSON mit ``main``. Beide Formen kommen vor, deshalb entscheidet
+# ``decode_status`` anhand des Inhalts.
+#
+# Von den festen Offsets sind nur die drei bestätigt, die im erprobten
+# Testclient (tools/grpc_status.py bzw. mc_status.py) seit Wochen plausible
+# Werte liefern. Alles andere bleibt bewusst leer, statt geraten zu werden –
+# der Live-Mitschnitt ergänzt es.
+
+MC3_FRAME_MIN_LEN = 28          # so weit reichen die bestätigten Felder
+MC3_OFF_TARGET_TEMP = 10        # 0-basiert
+MC3_OFF_SPEED = 16
+MC3_OFF_REMAIN_MIN = 26
+MC3_OFF_REMAIN_SEC = 27
+
+# extraInfo liefert cookMode in der App-internen Nummerierung (bd.a.b im APK),
+# NICHT in der Nummerierung des TLV-Tags 0x0200. Deshalb eine zweite Tabelle.
+APP_COOK_MODE = {
+    1: "turbo", 3: "manuell", 4: "dämpfen", 5: "braten", 6: "kneten", 17: "waage",
+}
+
+
+def decode_target_temp(index: int) -> int | None:
+    """Ziel-Temperatur des MC3.0: ein **Index**, keine Gradzahl.
+
+    0 = aus, 1 = 37 °C, ab 2 in Fünferschritten ab 40 °C. Damit erklärt sich
+    auch der Sonderfall 37 °C: er hat seinen eigenen Index. 130 °C ist Index 20.
+    """
+    if index <= 0:
+        return None
+    if index == 1:
+        return 37
+    return 40 + (index - 2) * 5
+
+
+def decode_mc3(frame_hex: str) -> DeviceLiveStatus:
+    """Dekodiert den MC3.0-Rahmen (feste Offsets, nur bestätigte Felder)."""
+    cleaned = frame_hex.strip().replace(" ", "")
+    if cleaned.lower().startswith("0x"):
+        cleaned = cleaned[2:]
+    try:
+        raw = bytes.fromhex(cleaned)
+    except ValueError as err:
+        raise McStatusError("MC3.0-Rahmen ist kein gültiger Hex-String") from err
+    if len(raw) < MC3_FRAME_MIN_LEN:
+        raise McStatusError(
+            f"MC3.0-Rahmen zu kurz ({len(raw)} Byte, mindestens {MC3_FRAME_MIN_LEN})"
+        )
+
+    st = DeviceLiveStatus(sources=("mc3",))
+    st.target_temp = decode_target_temp(raw[MC3_OFF_TARGET_TEMP])
+    # Halbstufen: der Rohwert ist das Doppelte der angezeigten Stufe.
+    st.speed_raw = raw[MC3_OFF_SPEED]
+    st.speed = raw[MC3_OFF_SPEED] / 2
+    minuten, sekunden = raw[MC3_OFF_REMAIN_MIN], raw[MC3_OFF_REMAIN_SEC]
+    if sekunden > 59:
+        st.problems = st.problems + (f"Sekundenbyte {sekunden} > 59",)
+    st.remaining_seconds = minuten * 60 + sekunden
+    st.tick_seconds = st.remaining_seconds
+    return st
+
+
+def decode_extra_info(extra_info: str) -> DeviceLiveStatus:
+    """Wertet ``DeviceStatusResponse.extraInfo`` (JSON) aus.
+
+    Das ist die **bevorzugte** Quelle: der Dienst schickt den Status hier
+    strukturiert, wir müssen nicht über Byte-Offsets raten. Feldnamen aus
+    ``CompactExtraInfoEntity`` der Hersteller-App. Zeiten stehen dort in
+    **Millisekunden** (im TLV-Rahmen dagegen in Sekunden).
+    """
+    try:
+        d = json.loads(extra_info)
+    except (ValueError, TypeError) as err:
+        raise McStatusError("extraInfo ist kein JSON") from err
+    if not isinstance(d, dict):
+        raise McStatusError("extraInfo ist kein JSON-Objekt")
+
+    st = DeviceLiveStatus(sources=("extraInfo",))
+
+    if isinstance(ct := d.get("commandType"), str) and ct:
+        st.command_type = ct.strip().lower()
+    if isinstance(cm := d.get("cookMode"), int):
+        st.cook_mode_raw = cm
+        st.cook_mode = APP_COOK_MODE.get(cm)
+    if isinstance(v := d.get("isPreHeat"), bool):
+        st.is_preheat = v
+    if isinstance(v := d.get("isScaleState"), bool):
+        st.scale_active = v
+    if isinstance(v := d.get("isTurboRunningState"), bool):
+        st.turbo_active = v
+
+    if isinstance(v := d.get("ntcTemperatureValue"), int) and v > 0:
+        st.current_temp = v
+    if isinstance(v := d.get("temperatureValue"), int) and v > 0:
+        st.target_temp = v
+    if isinstance(u := d.get("temperatureUnit"), str) and u:
+        st.temp_unit = "F" if "F" in u.upper() else "C"
+
+    if isinstance(v := d.get("speedLevel"), int):
+        st.speed_raw = v
+        st.speed = v / 2
+    if isinstance(v := d.get("isMotorAnti"), bool):
+        st.direction = "links" if v else "rechts"
+    if isinstance(v := d.get("errCode"), int):
+        st.error_code = v
+
+    if isinstance(v := d.get("isUpwardTimer"), bool):
+        st.is_countdown = not v
+    for name, ziel in (("remainingTime", "remaining_seconds"),
+                       ("runningTime", "elapsed_seconds"),
+                       ("totalTime", "total_seconds")):
+        v = d.get(name)
+        if isinstance(v, (int, float)) and v > 0:
+            setattr(st, ziel, int(v) // 1000)
+    if st.is_countdown is False and st.elapsed_seconds is not None:
+        st.tick_seconds = st.elapsed_seconds
+    elif st.remaining_seconds is not None:
+        st.tick_seconds = st.remaining_seconds
+
+    if isinstance(v := d.get("recipeID"), int) and v > 0:
+        st.recipe_id = v
+    if isinstance(v := d.get("stepIndex"), int):
+        st.step_index = v
+    if isinstance(v := d.get("totalStepIndex"), int):
+        st.total_step_index = v
+    return st
+
+
+def _verschmelzen(grund: DeviceLiveStatus, zusatz: DeviceLiveStatus) -> DeviceLiveStatus:
+    """Füllt leere Felder von ``grund`` aus ``zusatz`` auf (ohne zu überschreiben)."""
+    leer = DeviceLiveStatus()
+    for name in vars(leer):
+        if name in ("tags", "sources", "problems"):
+            continue
+        if getattr(grund, name) in (None, getattr(leer, name)) and getattr(zusatz, name) is not None:
+            setattr(grund, name, getattr(zusatz, name))
+    grund.tags = grund.tags or zusatz.tags
+    grund.sources = tuple(dict.fromkeys(grund.sources + zusatz.sources))
+    grund.problems = tuple(dict.fromkeys(grund.problems + zusatz.problems))
+    return grund
+
+
+def decode_status(hex_command: str | None = None,
+                  extra_info: str | None = None) -> DeviceLiveStatus:
+    """Baut den Live-Status aus beiden Quellen – ohne je zu werfen.
+
+    Reihenfolge: ``extraInfo`` (strukturiert, bevorzugt), danach der Hex-Rahmen
+    für alles, was noch leer ist. Welche Quelle gegriffen hat und was schieflief,
+    steht in ``sources`` bzw. ``problems`` – damit ist im Log sofort sichtbar,
+    woher ein Wert kommt.
+    """
+    st = DeviceLiveStatus()
+
+    if extra_info:
+        try:
+            st = _verschmelzen(st, decode_extra_info(extra_info))
+        except McStatusError as err:
+            st.problems = st.problems + (f"extraInfo: {err}",)
+
+    if hex_command:
+        roh = hex_command.strip()
+        try:
+            if roh.startswith("{"):
+                tlv = decode_main(extract_main(roh))
+                tlv.sources = ("tlv",)          # decode_main selbst setzt das nicht
+                st = _verschmelzen(st, tlv)
+            elif roh[:4].lower() == "5aa5":
+                tlv = decode_main(roh)
+                tlv.sources = ("tlv",)
+                st = _verschmelzen(st, tlv)
+            else:
+                st = _verschmelzen(st, decode_mc3(roh))
+        except McStatusError as err:
+            st.problems = st.problems + (f"hexCommand: {err}",)
+
+    if not st.sources:
+        st.problems = st.problems + ("keine verwertbare Quelle",)
+    return st
