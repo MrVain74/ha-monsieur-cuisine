@@ -1,5 +1,7 @@
 # Einrichtung – Monsieur Cuisine für Home Assistant (Alpha)
 
+🌐 [English](SETUP.md) · **Deutsch**
+
 > **Inoffiziell.** Keine Verbindung zu Lidl, SilverCrest oder Tecpal. Nutzt die nicht
 > dokumentierte Cloud-Schnittstelle der Monsieur-Cuisine-App – nur für dein **eigenes Konto**.
 > Kann durch Änderungen des Herstellers jederzeit brechen. Alpha-Test – Rückmeldungen willkommen.

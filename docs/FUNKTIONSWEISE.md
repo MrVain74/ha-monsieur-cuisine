@@ -1,5 +1,7 @@
 # Funktionsweise
 
+🌐 [English](HOW-IT-WORKS.md) · **Deutsch**
+
 > **Inoffiziell.** Keine Verbindung zu Lidl, SilverCrest oder Tecpal. Die
 > Integration nutzt die undokumentierte Cloud-Schnittstelle der Monsieur-Cuisine-App.
 > Sie **liest** Status- und Kontodaten und **schreibt Rezepte nur ins eigene

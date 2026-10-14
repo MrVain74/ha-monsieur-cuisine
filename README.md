@@ -22,7 +22,7 @@
 
 **Status: Alpha (v0.4.12)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
-👉 **Setup guide (German):** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) · **How it works (German):** [`docs/FUNKTIONSWEISE.md`](docs/FUNKTIONSWEISE.md)
+👉 **Setup guide:** [`docs/SETUP.md`](docs/SETUP.md) · **How it works:** [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) · Deutsch: [Einrichtung](docs/EINRICHTUNG.md) · [Funktionsweise](docs/FUNKTIONSWEISE.md)
 
 ## What it does
 
@@ -115,7 +115,7 @@ read alongside the page can catch it, so there is **one** sign-in path:
 Your e-mail, password and the captcha always stay between you and Lidl; the
 captcha is never bypassed.
 
-Step-by-step (German): [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md).
+Step-by-step: [`docs/SETUP.md`](docs/SETUP.md) (Deutsch: [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md)).
 
 ## Development
 
