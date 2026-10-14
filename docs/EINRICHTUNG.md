@@ -51,9 +51,12 @@ und sonst nichts. Passwort und Captcha bleiben vollständig bei dir und bei Lidl
 
 ## 4. Was du bekommst
 - **Gerät „Monsieur Cuisine Smart"** mit:
-  - **Live-Status beim Kochen** (MC Smart): Kochzustand, Ist-/Ziel-Temperatur,
-    Stufe, Restzeit, Fehlercode (Diagnose) und Deckel. Während das Gerät aus ist,
-    stehen die Live-Sensoren auf „nicht verfügbar".
+  - **Live-Status beim Kochen** (MC Smart): Kochzustand, Betriebsart,
+    Ziel-Temperatur, Stufe, Restzeit, Rezept (Name/Bild/ID) und Schritt-Nummer,
+    dazu die Binärsensoren **Vorheizen** und **Waage aktiv**. Während das Gerät aus
+    ist, stehen die Live-Sensoren auf „nicht verfügbar".
+    *(Ist-Temperatur, Deckel und Fehlercode sind beim MC3.0 **nicht** über die
+    Cloud verfügbar – siehe [Funktionsweise](FUNKTIONSWEISE.md).)*
   - Diagnose **Cloud-Verbindung** (verbunden/getrennt).
   - Sensor **Eigene Rezepte** (Anzahl).
 - **Einkaufsliste** als To-do-Liste und **Wochenplaner** als Kalender aus deinem

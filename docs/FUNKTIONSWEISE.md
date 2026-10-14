@@ -71,6 +71,13 @@ Rezeptbetrieb, dazu die Binärsensoren **Vorheizen** und **Waage aktiv**. Die
 Fertig-Meldung (`DONE`/`RECIPE_DONE`) eignet sich als Auslöser für
 Benachrichtigungen – nicht `STEP_DONE` (das meldet jeden Zwischenschritt).
 
+### Rezept-Schritttext und Gesamtzahl
+
+Läuft ein Rezept, lädt die Integration den Schritttext und die Gesamtzahl der
+Schritte einmal nach (über die Rezept-API, `GET api/v2/recipes/{id}`) und cached
+sie. Der Schritt-Sensor zeigt dann „Schritt N von M" mit dem Schritttext als
+Attribut. Die Gesamtzahl hängt an der gewählten Portionsgröße.
+
 ## Einkaufsliste und Wochenplaner
 
 Beide werden in ruhigem Abstand (alle 30 Minuten) aus dem Konto gelesen:
@@ -78,7 +85,8 @@ Beide werden in ruhigem Abstand (alle 30 Minuten) aus dem Konto gelesen:
 - **Einkaufsliste → To-do-Liste.** Zwei Quellen in einer Liste: die Zutaten der
   geplanten Rezepte und frei angelegte Einträge. Mengen werden als **Text**
   übernommen (sie können Bruchzeichen wie ½/¼ enthalten). Vorerst **nur
-  lesend** – das Abhaken in Home Assistant folgt später.
+  lesend** – das Abhaken und Entfernen in Home Assistant folgt später (in den
+  Issues notiert).
 - **Wochenplaner → Kalender.** Geplante Rezepte erscheinen als
   **Ganztagstermine** (der Planer kennt nur Tage, keine Uhrzeiten), mit dem
   Rezeptnamen als Titel und Link/Dauer in der Beschreibung.
@@ -114,7 +122,5 @@ Hochladen des Bildes ist derzeit über die Website nötig.
   Datenformat abgeleitet, aber noch nicht an einem Gerät geprüft.
 - Ist-Temperatur, Deckel, Gewicht und Fehlercode beim MC3.0: **über die Cloud
   nicht verfügbar** (am echten Gerät geprüft, siehe oben) – nur lokal am Gerät.
-- Rezept-**Schritttext** und **Gesamtzahl** der Schritte: noch offen (kommen
-  nicht im Live-Strom; müssten über die Rezept-API nachgeladen werden).
 - Abhaken der Einkaufsliste und Anlegen von Planer-Einträgen: vorbereitet,
   noch nicht aktiv.
