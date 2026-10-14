@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Browser helper ready?",
-        "description": "**Unofficial** – not affiliated with Lidl, SilverCrest or Tecpal.\n\nSigning in needs the small **browser helper**, once. It catches the sign-in code after the login and hands it over automatically – nothing to copy.\n\n➡️ **[Download & install the browser helper](https://github.com/MrVain74/ha-monsieur-cuisine/tree/main/browser-helper)** (short guide there, about a minute – first time only).\n\n**Is the helper installed and enabled?** Then press **Submit** below – the Lidl sign-in page opens next."
+        "description": "**Unofficial** – not affiliated with Lidl, SilverCrest or Tecpal.\n\nSigning in needs the small **browser helper**, once. It catches the sign-in code after the login and hands it over automatically – nothing to copy.\n\n➡️ **[Download & install the browser helper]({helper_link})** (short guide there, about a minute – first time only).\n\n**Is the helper installed and enabled?** Then press **Submit** below – the Lidl sign-in page opens next."
       },
       "login": {
         "title": "Sign in with Lidl",

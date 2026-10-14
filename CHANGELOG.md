@@ -4,6 +4,22 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.10] – 2026-10-14
+### Behoben – CI/Validierung grün bekommen
+- **hassfest:** Übersetzungstexte dürfen **keine URLs** enthalten. Der
+  Browser-Helfer-Link im Schritt `user` steht jetzt als Platzhalter
+  `{helper_link}` in `strings.json`/`translations` und wird im Config-Flow über
+  `description_placeholders` gefüllt (Link bleibt klickbar).
+- **hassfest-Warnung** behoben: `CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)`
+  in `__init__.py` (Integration hat keine YAML-Konfiguration).
+- **Test-Workflow:** installiert jetzt `aiohttp` (für den Koordinator-Test
+  nötig; vorher nur `pytest`).
+
+### Hinweis
+- **HACS-Validierung** bleibt rot, bis die GitHub-**Topics** gesetzt sind und ein
+  **brands**-Icon vorliegt (`brand/icon.png` oder PR an `home-assistant/brands`).
+  Vermerkt in `hacs-default-checkliste.md`. Keine Funktionsänderung; **172 Tests** grün.
+
 ## [0.4.9] – 2026-10-14
 ### Neu
 - **Schritt-Text und Gesamtzahl.** Der Schritt-Sensor zeigt weiterhin die

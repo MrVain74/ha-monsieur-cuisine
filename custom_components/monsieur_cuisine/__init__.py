@@ -39,6 +39,10 @@ from .mcbridge.client import JwtAuth, McApiError, McClient
 _LOGGER = logging.getLogger(__name__)
 PLATFORMS = [Platform.BINARY_SENSOR, Platform.CALENDAR, Platform.SENSOR, Platform.TODO]
 
+# Keine YAML-Konfiguration – Einrichtung nur über die Oberfläche (Config-Entries).
+# Macht hassfest zufrieden (async_setup ohne eigenes Schema).
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Einmalige Einrichtung: Empfangs-Adresse und Anmelde-Hilfsseite."""

@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Browser-Helfer bereit?",
-        "description": "**Inoffiziell** – keine Verbindung zu Lidl, SilverCrest oder Tecpal.\n\nFür die Anmeldung braucht es einmalig den kleinen **Browser-Helfer**. Er fängt nach dem Login den Anmelde-Code ab und übergibt ihn automatisch – du musst nichts kopieren.\n\n➡️ **[Browser-Helfer herunterladen & installieren](https://github.com/MrVain74/ha-monsieur-cuisine/tree/main/browser-helper)** (kurze Anleitung dort, ca. 1 Min – nur beim ersten Mal).\n\n**Ist der Helfer installiert und aktiv?** Dann unten auf **Absenden** – danach öffnet sich die Lidl-Anmeldung."
+        "description": "**Inoffiziell** – keine Verbindung zu Lidl, SilverCrest oder Tecpal.\n\nFür die Anmeldung braucht es einmalig den kleinen **Browser-Helfer**. Er fängt nach dem Login den Anmelde-Code ab und übergibt ihn automatisch – du musst nichts kopieren.\n\n➡️ **[Browser-Helfer herunterladen & installieren]({helper_link})** (kurze Anleitung dort, ca. 1 Min – nur beim ersten Mal).\n\n**Ist der Helfer installiert und aktiv?** Dann unten auf **Absenden** – danach öffnet sich die Lidl-Anmeldung."
       },
       "login": {
         "title": "Bei Lidl anmelden",

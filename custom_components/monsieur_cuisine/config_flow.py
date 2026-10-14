@@ -57,6 +57,11 @@ from .mcbridge.auth import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Link zum Browser-Helfer – als Platzhalter in die Texte gereicht. hassfest
+# verbietet URLs direkt in den Übersetzungen (strings.json/translations), darum
+# steht der Link hier im Code und nicht im Text.
+HELPER_LINK = "https://github.com/MrVain74/ha-monsieur-cuisine/tree/main/browser-helper"
+
 
 def _b64url(obj: dict) -> str:
     raw = json.dumps(obj, separators=(",", ":")).encode()
@@ -96,7 +101,11 @@ class McConfigFlow(ConfigFlow, domain=DOMAIN):
         ensure_views(self.hass)
 
         if user_input is None:
-            return self.async_show_form(step_id="user", data_schema=vol.Schema({}))
+            return self.async_show_form(
+                step_id="user",
+                data_schema=vol.Schema({}),
+                description_placeholders={"helper_link": HELPER_LINK},
+            )
 
         return await self.async_step_login()
 
