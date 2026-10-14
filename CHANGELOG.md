@@ -4,6 +4,15 @@ All notable changes to this integration. Format based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Unofficial – not
 affiliated with Lidl, SilverCrest or Tecpal.
 
+## [0.4.13] – 2026-10-14
+### Added
+- **Debug dump of the raw live frame.** With debug logging enabled, every live
+  message is logged once as `MC-Live Rohframe: model=… extraInfo=… hexCommand=…`,
+  **before** the model gate. This lets testers with other models
+  (MC Compact/Connect/Plus) capture their raw data for decoding without owning a
+  packet sniffer. Debug-level only; may contain device ID / recipe data, so
+  anonymize before sharing.
+
 ## [0.4.12] – 2026-10-14
 ### Changed
 - **Notification blueprint now alerts only on device-initiated events** – a step

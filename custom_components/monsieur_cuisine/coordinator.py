@@ -207,6 +207,17 @@ class McLiveCoordinator(DataUpdateCoordinator[DeviceLiveStatus | None]):
         self.connected = meldung.connected
         self.last_event = utcnow()
 
+        # Rohframe-Abzug (nur bei aktiviertem Debug-Log). Steht bewusst VOR der
+        # Modell-Schranke, damit Tester anderer Modelle (MC Compact/Connect/Plus)
+        # ihre Rohdaten mitloggen können, auch wenn wir sie noch nicht deuten.
+        # Enthält modellabhängig Geräte-ID/Rezeptdaten – vor dem Teilen bitte
+        # anonymisieren.
+        _LOGGER.debug(
+            "MC-Live Rohframe: model=%s connected=%s extraInfo=%s hexCommand=%s",
+            meldung.device_model, meldung.connected,
+            meldung.extra_info or "", meldung.hex_command or "",
+        )
+
         # Modell-Schranke: nur der MC3.0 liefert einen Rahmen, den wir deuten
         # können. Andere Modelle werden einmal gemeldet und dann ignoriert.
         modell = meldung.device_model or ""
