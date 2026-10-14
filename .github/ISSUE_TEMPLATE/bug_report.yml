@@ -1,51 +1,50 @@
-name: Fehler melden
-description: Etwas funktioniert nicht wie erwartet
+name: Bug report
+description: Something doesn't work as expected
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: >
-        Danke fürs Testen! **Inoffiziell** – keine Verbindung zu Lidl,
-        SilverCrest oder Tecpal. ⚠️ Bitte **keine Zugangsdaten, Tokens oder
-        Geräte-IDs** in Logs/Screenshots posten.
+        Thanks for testing! **Unofficial** – not affiliated with Lidl,
+        SilverCrest or Tecpal. ⚠️ Please do **not** post credentials, tokens or
+        device IDs in logs/screenshots.
   - type: input
     id: version
     attributes:
-      label: Version der Integration
-      placeholder: "z. B. v0.4.11"
+      label: Integration version
+      placeholder: "e.g. v0.4.12"
     validations:
       required: true
   - type: dropdown
     id: model
     attributes:
-      label: Gerät
+      label: Device
       options:
         - "MC Smart (MC3.0)"
         - "MC Compact (MC0.5)"
-        - "anderes / unbekannt"
+        - "other / unknown"
     validations:
       required: true
   - type: input
     id: ha
     attributes:
-      label: Home-Assistant-Version
-      placeholder: "z. B. 2025.10"
+      label: Home Assistant version
+      placeholder: "e.g. 2025.10"
   - type: textarea
     id: what
     attributes:
-      label: Was ist passiert?
-      description: Was hast du erwartet, und was kam stattdessen?
+      label: What happened?
+      description: What did you expect, and what happened instead?
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Schritte zum Nachstellen
+      label: Steps to reproduce
   - type: textarea
     id: logs
     attributes:
-      label: Logauszug (optional)
+      label: Log excerpt (optional)
       description: >
-        Einstellungen → System → Protokolle, nach „monsieur" filtern.
-        Vorher Tokens/IDs schwärzen!
+        Settings → System → Logs, filter for "monsieur". Redact tokens/IDs first!
       render: text

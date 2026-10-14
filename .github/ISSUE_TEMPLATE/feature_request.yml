@@ -1,16 +1,16 @@
-name: Wunsch / Idee
-description: Eine Funktion oder Verbesserung vorschlagen
+name: Feature request / idea
+description: Suggest a feature or improvement
 labels: ["enhancement"]
 body:
   - type: textarea
     id: idea
     attributes:
-      label: Worum geht es?
-      description: Welche Funktion oder Verbesserung wünschst du dir?
+      label: What is it about?
+      description: Which feature or improvement would you like?
     validations:
       required: true
   - type: textarea
     id: why
     attributes:
-      label: Warum ist das nützlich?
-      description: Was würde es dir im Alltag bringen?
+      label: Why is it useful?
+      description: What would it give you in everyday use?

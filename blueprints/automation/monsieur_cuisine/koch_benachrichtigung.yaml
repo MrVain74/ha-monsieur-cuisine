@@ -1,99 +1,199 @@
 blueprint:
   name: Monsieur Cuisine – Koch-Benachrichtigungen
   description: >
-    Schickt eine Push-Mitteilung, wenn ein Kochschritt fertig ist und/oder wenn
-    das Rezept bzw. der Kochvorgang fertig ist. Nutzt die Entitäten der
-    (inoffiziellen) Monsieur-Cuisine-Integration. Den Schritt-Text gibt es, sobald
-    er verfügbar ist – sonst meldet es die Schritt-Nummer.
+    Schickt eine Push-Mitteilung, wenn das Gerät **von allein** etwas erledigt
+    hat: ein Kochschritt ausgelaufen ist, der Vorgang fertig wurde oder die
+    Zieltemperatur erreicht ist.
+
+
+    Standardmäßig meldet es **nur selbsttätige** Ereignisse. Wechselt man selbst
+    am Gerät den Schritt oder bricht ab, kommt keine Mitteilung – man steht ja
+    davor. Erkannt wird das am Vorzustand: Ein ausgelaufener Schritt kommt immer
+    aus „running", ein übersprungener aus „step_stop". Am echten Gerät geprüft.
+
+
+    Nutzt die Entitäten der (inoffiziellen) Monsieur-Cuisine-Integration.
   domain: automation
   input:
-    kochzustand:
-      name: Kochzustand-Sensor
-      description: Der Sensor „Kochzustand" des Monsieur-Cuisine-Geräts.
-      selector:
-        entity:
-          integration: monsieur_cuisine
-          domain: sensor
-    rezept:
-      name: Rezept-Sensor (optional)
-      description: Für den Rezeptnamen in der Meldung.
-      default: ""
-      selector:
-        entity:
-          integration: monsieur_cuisine
-          domain: sensor
-    schritt:
-      name: Schritt-Sensor (optional)
-      description: Für die Schritt-Nummer/-Text in der Meldung.
-      default: ""
-      selector:
-        entity:
-          integration: monsieur_cuisine
-          domain: sensor
-    dienst:
-      name: Benachrichtigungsdienst
-      description: 'z. B. notify.mobile_app_dein_handy (ohne Anführungszeichen).'
-      selector:
-        text: {}
-    bei_schritt:
-      name: Bei jedem fertigen Schritt melden
-      default: true
-      selector:
-        boolean: {}
-    bei_fertig:
-      name: Bei fertigem Rezept/Vorgang melden
-      default: true
-      selector:
-        boolean: {}
+    geraet:
+      name: Gerät
+      icon: mdi:bowl-mix
+      input:
+        kochzustand:
+          name: Kochzustand-Sensor
+          description: Der Sensor „Kochzustand" des Monsieur-Cuisine-Geräts.
+          selector:
+            entity:
+              integration: monsieur_cuisine
+              domain: sensor
+        rezept:
+          name: Rezept-Sensor (optional)
+          description: Für den Rezeptnamen in der Meldung.
+          default: ""
+          selector:
+            entity:
+              integration: monsieur_cuisine
+              domain: sensor
+        schritt:
+          name: Schritt-Sensor (optional)
+          description: >
+            Für Nummer, Gesamtzahl und Text des Schritts in der Meldung.
+          default: ""
+          selector:
+            entity:
+              integration: monsieur_cuisine
+              domain: sensor
+        vorheizen:
+          name: Vorheizen-Sensor (optional)
+          description: >
+            Nur nötig für die Meldung „auf Temperatur". Leer lassen, wenn du sie
+            nicht brauchst.
+          default: []
+          selector:
+            entity:
+              integration: monsieur_cuisine
+              domain: binary_sensor
+              multiple: true
+    meldungen:
+      name: Was gemeldet wird
+      icon: mdi:bell-outline
+      input:
+        dienst:
+          name: Benachrichtigungsdienst
+          description: 'z. B. notify.mobile_app_dein_handy (ohne Anführungszeichen).'
+          selector:
+            text: {}
+        nur_selbsttaetig:
+          name: Nur melden, wenn das Gerät von allein fertig wurde
+          description: >
+            Empfohlen. Aus bedeutet: Es wird auch gemeldet, wenn du selbst den
+            Schritt übersprungen oder abgebrochen hast.
+          default: true
+          selector:
+            boolean: {}
+        bei_schritt:
+          name: Wenn ein Schritt ausgelaufen ist
+          default: true
+          selector:
+            boolean: {}
+        bei_fertig:
+          name: Wenn der Vorgang fertig ist
+          default: true
+          selector:
+            boolean: {}
+        bei_temperatur:
+          name: Wenn die Zieltemperatur erreicht ist
+          description: >
+            Braucht den Vorheizen-Sensor. Hinweis: Bei Schritten mit einem Ziel
+            über dem Siedepunkt (etwa Dampfgaren mit 120 °C) wird sie nie
+            erreicht – dann kommt zu Recht keine Meldung.
+          default: true
+          selector:
+            boolean: {}
 
 mode: queued
 max: 10
 
 variables:
+  v_kochzustand: !input kochzustand
   v_rezept: !input rezept
   v_schritt: !input schritt
   v_dienst: !input dienst
+  v_nur_selbsttaetig: !input nur_selbsttaetig
   v_bei_schritt: !input bei_schritt
   v_bei_fertig: !input bei_fertig
+  v_bei_temperatur: !input bei_temperatur
+  # Rezeptname, falls gesetzt und belegt
+  v_rezeptname: >-
+    {% set r = states(v_rezept) if v_rezept else '' %}
+    {{ r if r not in ['', 'unknown', 'unavailable'] else '' }}
+  # „Schritt 5 von 8" bzw. „Schritt 5", falls der Sensor gesetzt ist
+  v_schritt_text: >-
+    {% set nr = states(v_schritt) if v_schritt else '' %}
+    {% if nr in ['', 'unknown', 'unavailable'] %}
+    {% else %}
+      {%- set ges = state_attr(v_schritt, 'schritte_gesamt') -%}
+      {{- 'Schritt ' ~ nr ~ (' von ' ~ ges if ges else '') -}}
+    {% endif %}
+  # Vorsicht: state_attr gibt None zurück, wenn das Attribut fehlt – ohne
+  # diese Absicherung stünde das Wort "None" in der Mitteilung.
+  v_schritt_inhalt: >-
+    {% set t = state_attr(v_schritt, 'text') if v_schritt else none %}
+    {{ t if t else '' }}
 
 triggers:
   - trigger: state
     entity_id: !input kochzustand
+    to: step_done
+    id: schritt_fertig
+  - trigger: state
+    entity_id: !input kochzustand
     to:
-      - step_done
       - done
       - recipe_done
+    id: fertig
+  # Vorheizen endet = Zieltemperatur erreicht. Die fünf Sekunden sind Absicht:
+  # Bricht man den Schritt ab, geht „Vorheizen" ebenfalls aus – dann ist der
+  # Kochzustand nach dieser kurzen Wartezeit nicht mehr „running" und die
+  # Bedingung unten greift.
+  - trigger: state
+    entity_id: !input vorheizen
+    from: "on"
+    to: "off"
+    for: "00:00:05"
+    id: temperatur
+
+conditions:
+  - condition: template
+    value_template: >-
+      {% if trigger.id == 'temperatur' %}
+        {{ (v_bei_temperatur | bool) and is_state(v_kochzustand, 'running') }}
+      {% else %}
+        {%- set an = v_bei_schritt if trigger.id == 'schritt_fertig' else v_bei_fertig -%}
+        {%- set vorher = trigger.from_state.state if trigger.from_state else '' -%}
+        {{ (an | bool) and ((not (v_nur_selbsttaetig | bool)) or vorher == 'running') }}
+      {% endif %}
 
 actions:
   - choose:
-      # Ein Schritt ist fertig (Rezept läuft weiter)
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.to_state.state == 'step_done' and (v_bei_schritt | bool) }}"
+      # Ein Schritt ist von allein ausgelaufen (das Rezept läuft weiter)
+      - conditions: "{{ trigger.id == 'schritt_fertig' }}"
         sequence:
           - service: "{{ v_dienst }}"
             data:
-              title: >-
-                {{ states(v_rezept) if v_rezept and states(v_rezept) not in ['unknown','unavailable',''] else 'Monsieur Cuisine' }}
+              title: "{{ v_rezeptname if v_rezeptname else 'Monsieur Cuisine' }}"
               message: >-
-                {% set nr = states(v_schritt) if v_schritt else '' %}
-                {% if nr not in ['', 'unknown', 'unavailable'] %}
-                Schritt {{ nr }} fertig.
-                {% else %}
-                Ein Schritt ist fertig.
-                {% endif %}
-      # Rezept bzw. Kochvorgang komplett fertig
-      - conditions:
-          - condition: template
-            value_template: "{{ trigger.to_state.state in ['done','recipe_done'] and (v_bei_fertig | bool) }}"
+                {%- set kopf = v_schritt_text | trim -%}
+                {%- set inhalt = v_schritt_inhalt | trim -%}
+                {%- if kopf and inhalt -%}
+                  {{ kopf }} fertig: {{ inhalt }}
+                {%- elif kopf -%}
+                  {{ kopf }} fertig.
+                {%- else -%}
+                  Ein Schritt ist fertig.
+                {%- endif -%}
+      # Der ganze Vorgang ist von allein fertig geworden
+      - conditions: "{{ trigger.id == 'fertig' }}"
         sequence:
           - service: "{{ v_dienst }}"
             data:
               title: "Monsieur Cuisine"
               message: >-
-                {% set r = states(v_rezept) if v_rezept else '' %}
-                {% if r not in ['', 'unknown', 'unavailable'] %}
-                „{{ r }}" ist fertig. 🎉
-                {% else %}
-                Fertig – der Kochvorgang ist abgeschlossen. 🎉
-                {% endif %}
+                {%- if v_rezeptname -%}
+                  „{{ v_rezeptname }}" ist fertig. 🎉
+                {%- else -%}
+                  Fertig – der Kochvorgang ist abgeschlossen. 🎉
+                {%- endif -%}
+      # Vorheizen vorbei = Zieltemperatur erreicht, der Schritt-Timer läuft an
+      - conditions: "{{ trigger.id == 'temperatur' }}"
+        sequence:
+          - service: "{{ v_dienst }}"
+            data:
+              title: "{{ v_rezeptname if v_rezeptname else 'Monsieur Cuisine' }}"
+              message: >-
+                {%- set kopf = v_schritt_text | trim -%}
+                {%- if kopf -%}
+                  Auf Temperatur – {{ kopf }} läuft jetzt.
+                {%- else -%}
+                  Auf Temperatur – es geht los.
+                {%- endif -%}

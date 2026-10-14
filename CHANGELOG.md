@@ -1,11 +1,27 @@
-# Änderungsverlauf
+# Changelog
 
-Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
-[Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
-Verbindung zu Lidl, SilverCrest oder Tecpal.
+All notable changes to this integration. Format based on
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Unofficial – not
+affiliated with Lidl, SilverCrest or Tecpal.
+
+## [0.4.12] – 2026-10-14
+### Changed
+- **Notification blueprint now alerts only on device-initiated events** – a step
+  that ran out on its own, the whole process finishing, or the target temperature
+  being reached. Step changes/cancels *you* trigger no longer notify (you're
+  standing at the device anyway); detected via the previous state
+  (`from_state == 'running'`). Adds a "target temperature reached" message and
+  fixes a stray "None" when a step has no text. Verified against the real device.
+  (Built by Code, integrated here.)
+
+### Docs
+- **Repo moved to English** for its public face: README wording, issue templates
+  and the Changelog headings. The integration's in-app texts are now **English by
+  default** (`strings.json`); **German ships as a translation** (`translations/de.json`).
+- No core functionality change; 172 tests green.
 
 ## [0.4.11] – 2026-10-14
-### Auftritt / Präsentation
+### Presentation
 - **Eigenes Icon** (`custom_components/monsieur_cuisine/brand/icon.png` +
   `icon@2x.png`, eigenes Design, kein Hersteller-Logo) – erscheint in HACS und
   deckt zugleich den HACS-brands-Rückfallpfad ab.
@@ -18,7 +34,7 @@ Verbindung zu Lidl, SilverCrest oder Tecpal.
 - Keine Funktionsänderung; 172 Tests grün.
 
 ## [0.4.10] – 2026-10-14
-### Behoben – CI/Validierung grün bekommen
+### Fixed – getting CI/validation green
 - **hassfest:** Übersetzungstexte dürfen **keine URLs** enthalten. Der
   Browser-Helfer-Link im Schritt `user` steht jetzt als Platzhalter
   `{helper_link}` in `strings.json`/`translations` und wird im Config-Flow über
@@ -28,13 +44,13 @@ Verbindung zu Lidl, SilverCrest oder Tecpal.
 - **Test-Workflow:** installiert jetzt `aiohttp` (für den Koordinator-Test
   nötig; vorher nur `pytest`).
 
-### Hinweis
+### Note
 - **HACS-Validierung** bleibt rot, bis die GitHub-**Topics** gesetzt sind und ein
   **brands**-Icon vorliegt (`brand/icon.png` oder PR an `home-assistant/brands`).
   Vermerkt in `hacs-default-checkliste.md`. Keine Funktionsänderung; **172 Tests** grün.
 
 ## [0.4.9] – 2026-10-14
-### Neu
+### Added
 - **Schritt-Text und Gesamtzahl.** Der Schritt-Sensor zeigt weiterhin die
   Nummer als Zustand, bekommt aber Attribute dazu: `text`, `schritte_gesamt`,
   `titel` und `schritt_modus`. Damit lässt sich „Schritt 8 von 8: Dampfgaren"
@@ -76,22 +92,22 @@ Verbindung zu Lidl, SilverCrest oder Tecpal.
   echte API-Antwort gegengeprüft. Gesamt **172 Tests**.
 
 ## [0.4.8] – 2026-10-13
-### Behoben
+### Fixed
 - **„verstrichen"-Attribut der Restzeit.** Beim Countdown zeigte es die Restzeit
   statt der verstrichenen Zeit. Jetzt wird es aus **Gesamt − Rest** abgeleitet,
   wenn der Dienst keine verstrichene Zeit mitschickt (MC3.0 und MC0.5).
 
-### Geändert
+### Changed
 - **Diagnose-Logzeilen (`MC-…`) auf `debug` gesenkt**, soweit sie Routine sind
   (Callback-Ablauf, „Einloesung erfolgreich"). Echte Fehler bleiben `warning`.
   Das Log ist im Normalbetrieb damit ruhig.
 
-### HACS-Vorbereitung
+### HACS preparation
 - **`hacs.json`** im Repo-Root (Anzeigename, README-Anzeige).
 - **GitHub-Workflows** `.github/workflows/`: HACS-Action + hassfest (Validierung)
   und eine Test-CI (pytest).
 
-### Neu
+### Added
 - **Blueprint** `blueprints/automation/monsieur_cuisine/koch_benachrichtigung.yaml`:
   Push-Mitteilung bei fertigem Schritt (`step_done`) und/oder fertigem Rezept/
   Vorgang (`done`/`recipe_done`), Ziel-Dienst und Umfang wählbar.
@@ -101,7 +117,7 @@ Verbindung zu Lidl, SilverCrest oder Tecpal.
   Ableitung für TLV und MC3.0. Gesamt **146 Tests**.
 
 ## [0.4.7] – 2026-10-13
-### Dokumentation
+### Docs
 - **README und `FUNKTIONSWEISE.md` an die v0.4.6-Entitäten angepasst.** Die
   Beschreibungen nannten noch die entfernten Entitäten (Ist-Temperatur, Deckel,
   Fehlercode) und keine der neuen.
@@ -116,7 +132,7 @@ Verbindung zu Lidl, SilverCrest oder Tecpal.
 - Keine Code-Änderung; **145 Tests** unverändert grün.
 
 ## [0.4.6] – 2026-10-13
-### Entfernt – diese Werte gibt die Cloud nicht her
+### Removed – values the cloud doesn't expose
 Am Testabend mit dem echten Gerät gemessen (vier Mitschnitte, 150 Frames):
 - **Ist-Temperatur**: 2 Minuten Heizen von kalt auf 100 °C – kein Byte wandert
   mit, kein Feld in `extraInfo`. Auch der Griff „Ziel 130 → 65 °C bei kochendem
@@ -127,7 +143,7 @@ Am Testabend mit dem echten Gerät gemessen (vier Mitschnitte, 150 Frames):
 
 Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
 
-### Neu
+### Added
 - **Betriebsart** (`sensor`): aus **Byte 19** des Rahmens, das der
   Geräte-Nummerierung folgt (`DeviceConstants.CookModeConstants`). Live belegt:
   1 manuell, 3 dämpfen, 5 kneten. Hier ist der Rahmen die **bessere** Quelle –
@@ -146,7 +162,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
 - **Drehrichtung** als Attribut der Betriebsart, aus Byte 17 (im Knetprogramm
   wechselt es – Deutung als Linkslauf noch zu bestätigen).
 
-### Hinweise für Automatisierungen
+### Notee für Automatisierungen
 - Fertig-Meldung: auf `done` oder `recipe_done` hören, **nicht** auf
   `step_done` – sonst meldet es jeden Zwischenschritt. Beobachtet wurden
   `PREPARE`, `START`, `RUNNING`, `PAUSE`, `RESUME`, `STOP`, `DONE`,
@@ -164,7 +180,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   `cookMode = 124` schlägt. Gesamt **145 Tests**.
 
 ## [0.4.5] – 2026-10-13
-### Behoben
+### Fixed
 - **Live-Status erholt sich nach langer Geräte-Pause von allein.** Beim
   Live-Test am 13.10. standen die Sensoren still: Werte eingefroren seit Stunden,
   Cloud-Verbindung „off", und erst ein Neuladen der Integration brachte sie
@@ -190,7 +206,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   verarbeitet. Gesamt **126 Tests**.
 
 ## [0.4.4] – 2026-10-13
-### Hinzugefügt
+### Added
 - **Erneute Anmeldung (Reauth) ohne Löschen.** Wird die gespeicherte Sitzung
   ungültig (z. B. Passwortwechsel bei Lidl oder längere Pause), wirft der Abruf
   `ConfigEntryAuthFailed` – HA bietet jetzt einen **„Erneut anmelden"**-Knopf.
@@ -204,7 +220,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   → `lidl_refresh_token`. Die reine Umzugslogik steht HA-frei in `migration.py`
   (`migrate_data`); ein Downgrade (Eintrag neuer als der Code) wird abgelehnt.
 
-### Hintergrund
+### Background
 - Damit ist beantwortet, was bis dahin ungetestet war: **Ein Update der
   Integration erzwingt keine neue Anmeldung.** Die Anmeldung liegt im
   Config-Eintrag (`.storage`), den ein HACS-Update nicht anfasst; der JWT wird
@@ -212,7 +228,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   Restfälle ab: Format-Änderung (Migration) und serverseitig entzogene Sitzung
   (Reauth).
 
-### Regel
+### Rule
 - `McConfigFlow.VERSION` nie anheben, ohne in `migration.migrate_data` einen
   Umzug **und** einen Test zu ergänzen. Ein Test wacht darüber, dass
   `VERSION == migration.CURRENT_VERSION`.
@@ -223,7 +239,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   Eintrag-Auffrischung + reload, Konto-Mismatch). Gesamt **123 Tests**.
 
 ## [0.4.3] – 2026-10-13
-### Dokumentation
+### Docs
 - **Nutzer-Doku von erledigten Entwicklungsthemen bereinigt.** In `README.md`,
   `docs/EINRICHTUNG.md` und `docs/FUNKTIONSWEISE.md` standen noch Hinweise auf
   inzwischen gelöste Probleme und entfernte Anmeldewege. Wer über HACS neu
@@ -242,7 +258,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
 - Keine Code-Änderung; **114 Tests** unverändert grün.
 
 ## [0.4.2] – 2026-10-13
-### Behoben
+### Fixed
 - **Die Lidl-Anmeldung öffnete sich beim Hinzufügen sofort**, ohne Vorab-Hinweis
   (Folge des Umbaus in 0.4.0: `async_step_user` gab direkt den External Step
   zurück). Wer nicht wusste, dass dafür der Browser-Helfer laufen muss, stand
@@ -252,7 +268,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   „Browser-Helfer bereit?" samt Installationslink. Erst nach **Absenden** folgt
   der External Step mit der Lidl-Anmeldung. Kein Menü – nur dieser eine Hinweis.
 
-### Geändert
+### Changed
 - Der External Step heißt jetzt `login` (`async_step_login`), der Hinweis bleibt
   `user`. Die Empfangs-Adresse findet den Schritt über die `step_id`, also ohne
   Änderung am Callback.
@@ -260,7 +276,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   der Installationslink des Helfers sitzt jetzt im Hinweis-Schritt, wo er vor
   der Anmeldung gelesen wird.
 
-### Unverändert
+### Unchanged
 - Die Doppel-Treiber-Logik aus 0.4.1 (`DATA_FLOW_FINISHING`, `_redeem_once`,
   Vortritt für den Dialog, `already_configured` als Erfolg) und die
   Empfangs-Adresse selbst: nicht angetastet.
@@ -273,7 +289,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   `assert 'external' == 'form'`. Gesamt **114 Tests**.
 
 ## [0.4.1] – 2026-10-13
-### Behoben
+### Fixed
 - **Ersteinrichtung zeigte zwei Fehlerdialoge, obwohl sie klappte.** Der Eintrag
   wurde angelegt, danach erschienen „Invalid flow specified" auf der
   Integrationsseite und „Anmeldung nicht abgeschlossen (already_configured)" auf
@@ -309,14 +325,14 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   Eintrag (Unique-ID-Schutz von HA im Testdoppel nachgebildet), die
   Beanspruchung wird gesetzt, `async_remove` räumt auf. Gesamt **111 Tests**.
 
-### Bekannte Restunschärfe
+### Known limitation
 - Träte die Oberfläche erst **nach** Ablauf der Vortrittszeit an (also später als
   zwei Sekunden), könnte sie weiterhin als Zweite in den Abschluss laufen und
   einen Hinweis zeigen. Im Normalfall meldet sie sich nach Millisekunden; diese
   Lücke lässt sich ohne Eingriff in HAs Flow-Verwaltung nicht ganz schließen.
 
 ## [0.4.0] – 2026-10-13
-### Geändert – spürbar
+### Changed – user-facing
 - **Nur noch ein Anmeldeweg: der Browser-Helfer.** Das Auswahlmenü beim
   Hinzufügen ist weg; die Einrichtung geht direkt in den Login. Die Wege
   „Ohne Zusatzprogramm (Lesezeichen)" und „Manuell (Quelltext einfügen)" sind
@@ -328,7 +344,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   hinter einem Menü). Wer die Integration erneut hinzufügt, landet sofort im
   gewohnten „Website öffnen".
 
-### Entfernt
+### Removed
 - Flow-Schritte `async_step_bookmark` und `async_step_manual`.
 - `McLoginView` samt Lesezeichen-Hilfsseite, `LOGIN_PATH`, Eingabefeld
   `redirect_url`.
@@ -338,7 +354,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
 - Alle zugehörigen Texte in `strings.json` und den Übersetzungen (de + en),
   einschließlich des nun gegenstandslosen `error`-Blocks.
 
-### Unverändert
+### Unchanged
 - `McCallbackView` und `ensure_views` bleiben – Weg A braucht die
   Empfangs-Adresse, und sie muss schon während des Dialogs registriert sein.
 - Einmal-Einlösung (`_redeem_once`), Vortritt für den offenen Dialog,
@@ -355,7 +371,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   Begründung, warum ein Zusatzprogramm nötig ist.
 
 ## [0.3.9] – 2026-10-13
-### Dokumentation
+### Docs
 - README aktualisiert: Live-Status-Sensoren sowie Einkaufsliste/Wochenplaner
   sind **erledigt** (vorher „geplant"); Entitätenliste und Tabelle der
   unterstützten Modelle ergänzt; Hinweis, dass die Integration nur liest und
@@ -365,7 +381,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   ohne interne Details des dekompilierten App-Codes.
 
 ## [0.3.8] – 2026-10-13
-### Behoben
+### Fixed
 - **`extraInfo` wurde beim MC3.0 nicht ausgewertet.** Seit 0.3.5 las
   `decode_extra_info` die Feldnamen des **MC0.5** (`temperatureValue`,
   `speedLevel`). Der MC3.0 benutzt laut App-Quellcode aber `ExtraInfoEntity`
@@ -377,7 +393,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
 - `extraInfo` mit `command != 1` wird vermerkt (die App wertet nur `1` aus),
   aber nicht verworfen.
 
-### Dokumentation
+### Docs
 - Modell-Abdeckung aus dem APK geklärt: **MC3.0** (Smart) und **MC0.5**
   (Compact) sind IoT-/live-fähig, **MC2.0** und **MC1.1** nicht. Die App
   klassifiziert über die **Geräte-ID** (`MC30` ist die Vorgabe). Ein Parser mit
@@ -389,7 +405,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
 - Die ausführlichen Befunde liegen in den (privaten) Projektunterlagen; eine
   bereinigte öffentliche Fassung folgt erst nach Freigabe.
 
-### Sicherheit
+### Security
 - Georgs echte `user_id` durch einen Dummy ersetzt (`tools/grpc_status.py`
   sowie `tests/test_live_status.py`). **Hinweis:** in der bereits
   veröffentlichten Historie (Commit `31c1f1f`) steht sie noch.
@@ -400,14 +416,14 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   `command`-Vermerk). Gesamt **114 Tests**.
 
 ## [0.3.7] – 2026-10-13
-### Geändert
+### Changed
 - Einkaufsliste und Wochenplaner hängen jetzt am Monsieur-Cuisine-Gerät statt
   frei zu stehen. Dadurch heißen sie eindeutig „Monsieur Cuisine Einkaufsliste"
   bzw. „… Wochenplaner" (vorher bloß „Einkaufsliste"/„Wochenplaner", was mit
   anderen Listen kollidierte) und erscheinen auf der Gerätekarte.
 
 ## [0.3.6] – 2026-10-13
-### Neu
+### Added
 - **Einkaufsliste als Aufgabenliste (`todo`).** Zeigt die Konto-Einkaufsliste in
   Home Assistant – Rezept-Zutaten und freie Einträge in einer Liste, mit Menge
   und Einheit als Text (Unicode-Brüche ½/¼ bleiben erhalten), inklusive
@@ -422,7 +438,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   Planer-Vorschaufenster; ein Planer-Fehler reißt die Einkaufsliste nicht mit.
 
 ## [0.3.5] – 2026-10-13
-### Neu
+### Added
 - **Live-Status beim Kochen (Push über gRPC).** `McLiveCoordinator` abonniert
   `loginDeviceStatus` auf `mc-grpc.tecpal.com`, hält den Strom offen, verbindet
   mit wachsender Wartezeit neu (5 s → 5 min) und holt den JWT vor jedem Versuch
@@ -436,7 +452,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
 - `mcbridge/status.proto` liegt jetzt in der Integration; `grpcio` ist als
   Anforderung im Manifest eingetragen.
 
-### Geändert
+### Changed
 - `mcbridge/status.py` versteht jetzt **beide** Statusformen: den TLV-Rahmen der
   MC05-Kette (unverändert) **und** den festen MC3.0-Rahmen aus dem Live-Strom,
   dazu `extraInfo` als strukturierte und bevorzugte Quelle. `decode_status`
@@ -447,7 +463,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   der Sonderfall 37 °C. Zeiten stehen in `extraInfo` in **Millisekunden**, im
   TLV-Rahmen in Sekunden.
 
-### Offen (mit Live-Mitschnitt zu bestätigen)
+### Open (to confirm with a live capture)
 - Startkennung des MC3.0-Rahmens (`AA 00 …` statt `5A A5`) und ob die Stufe
   wirklich halbiert werden muss – der Rohwert steht als Attribut `rohwert` am
   Stufen-Sensor.
@@ -462,7 +478,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   Gesamt **91 Tests**.
 
 ## [0.3.4] – 2026-10-13
-### Behoben
+### Fixed
 - **Login schließt jetzt zuverlässig ab (kein `invalid_grant` mehr).** Nach dem
   Fix in 0.3.3 trieben zwei Stellen den Abschluss (der offene Einrichtungsdialog
   **und** die Empfangs-Adresse), wodurch der Einmal-Code **zweimal** eingelöst
@@ -476,7 +492,7 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   Treibern). Gesamt 45 Tests.
 
 ## [0.3.3] – 2026-10-12
-### Behoben
+### Fixed
 - **Dialog-Hänger nach dem Login behoben.** Home Assistant setzt einen
   Config-Flow nach einem External Step nicht von allein fort (die Schleife in
   `async_configure` läuft nur bei `SHOW_PROGRESS_DONE` weiter, nicht bei
@@ -485,41 +501,41 @@ Die drei Entitäten standen dauerhaft auf „unbekannt" und sind raus.
   jetzt selbst weiter und fängt `UnknownFlow` ab.
 - Callback-Seite meldet das Ergebnis ehrlich (bei Abbruch nicht mehr
   „Angemeldet").
-### Geändert
+### Changed
 - Menü/Doku nach Messlage: **Browser-Helfer = empfohlen** (in Chrome der einzig
   verlässliche Weg), Lesezeichen als fehleranfällig gekennzeichnet, Manuell als
   browserunabhängige Rückfallebene (zusätzlich DevTools-Netzwerkweg).
 
 ## [0.3.2] – 2026-10-12
-### Geändert
+### Changed
 - Weg **Manuell** nutzt `response_mode=form_post`: Der Code steht danach im
   Seitenquelltext und ist in Chrome zuverlässig kopierbar (die `lidl-com…`-
   Adresse zeigt Chrome nicht in der Adressleiste).
 
 ## [0.3.1] – 2026-10-12
-### Hinzugefügt
+### Added
 - Diagnose-Logging (`MC-`-Zeilen) für den Anmelde-Callback.
 
 ## [0.3.0] – 2026-10-12
-### Hinzugefügt
+### Added
 - Dritter Login-Weg **„Ohne Zusatzprogramm"**: Home Assistant liefert eine
   Hilfsseite mit Lesezeichen aus; dank `form_post` steht der Code auf einer
   normalen Seite. `extract_code()` erkennt Weiterleitungs-Adresse,
   Seitenquelltext oder nackten Code.
 
 ## [0.2.1] – 2026-10-12
-### Behoben
+### Fixed
 - 404 am Anmelde-Callback: Empfangs-Adresse (HTTP-View) wird schon im
   Config-Flow registriert, nicht erst in `async_setup`.
 
 ## [0.2.0] – 2026-10-12
-### Hinzugefügt
+### Added
 - Automatischer Login über den **Browser-Helfer** (`browser-helper/`, MV3) +
   HA-Empfangsadresse (HAs `async_external_step`). Das Add-on fängt die
   Weiterleitung über `onHeadersReceived` (Location-Header) ab.
 
 ## [0.1.0] – 2026-10-11
-### Hinzugefügt
+### Added
 - Erste Fassung: Aktion `send_recipe` (schema.org/JSON → Gerät-Rezept mit
   Maschinenschritten), Schritt-Übersetzer, Sensor „Eigene Rezepte",
   Diagnose „Cloud-Verbindung", Anmelde-Dialog. Installation über HACS.

@@ -2,96 +2,96 @@
   "config": {
     "step": {
       "user": {
-        "title": "Browser-Helfer bereit?",
-        "description": "**Inoffiziell** – keine Verbindung zu Lidl, SilverCrest oder Tecpal.\n\nFür die Anmeldung braucht es einmalig den kleinen **Browser-Helfer**. Er fängt nach dem Login den Anmelde-Code ab und übergibt ihn automatisch – du musst nichts kopieren.\n\n➡️ **[Browser-Helfer herunterladen & installieren]({helper_link})** (kurze Anleitung dort, ca. 1 Min – nur beim ersten Mal).\n\n**Ist der Helfer installiert und aktiv?** Dann unten auf **Absenden** – danach öffnet sich die Lidl-Anmeldung."
+        "title": "Browser helper ready?",
+        "description": "**Unofficial** – not affiliated with Lidl, SilverCrest or Tecpal.\n\nSigning in needs the small **browser helper**, once. It catches the sign-in code after the login and hands it over automatically – nothing to copy.\n\n➡️ **[Download & install the browser helper]({helper_link})** (short guide there, about a minute – first time only).\n\n**Is the helper installed and enabled?** Then press **Submit** below – the Lidl sign-in page opens next."
       },
       "login": {
-        "title": "Bei Lidl anmelden",
-        "description": "Klick unten auf **Website öffnen** und melde dich bei Lidl an (E-Mail, Passwort und Captcha gibst du selbst ein).\n\nDer Browser-Helfer übergibt den Anmelde-Code danach automatisch – dieser Dialog schließt sich **von allein**."
+        "title": "Sign in with Lidl",
+        "description": "Click **Open website** below and sign in with Lidl (e-mail, password and captcha are up to you).\n\nThe browser helper then hands the sign-in code over automatically – this dialog closes **on its own**."
       },
       "reauth_confirm": {
-        "title": "Erneut bei Lidl anmelden",
-        "description": "Die gespeicherte Sitzung gilt nicht mehr (z. B. nach einem Passwortwechsel oder längerer Pause). Eine einmalige neue Anmeldung bei Lidl stellt die Verbindung wieder her – dein Gerät und alle Einstellungen bleiben erhalten.\n\n**Browser-Helfer aktiv?** Dann unten auf **Absenden** – danach öffnet sich die Lidl-Anmeldung."
+        "title": "Sign in with Lidl again",
+        "description": "The stored session is no longer valid (e.g. after a password change or a long break). Signing in with Lidl once more restores the connection – your device and all settings stay in place.\n\n**Browser helper active?** Then press **Submit** below – the Lidl sign-in page opens next."
       }
     },
     "abort": {
-      "already_configured": "Dieses Konto ist bereits eingerichtet.",
-      "invalid_auth": "Anmeldung fehlgeschlagen. Bitte den Login erneut starten (der Code gilt nur kurz).",
-      "cannot_connect": "Verbindung zur Monsieur-Cuisine-Cloud fehlgeschlagen. Bitte später erneut versuchen.",
-      "no_url": "Home Assistant kennt seine eigene Adresse nicht. Bitte unter Einstellungen → System → Netzwerk eine URL hinterlegen.",
-      "reauth_successful": "Erneute Anmeldung erfolgreich – die Verbindung steht wieder.",
-      "reauth_account_mismatch": "Diese Anmeldung gehört zu einem anderen Konto. Bitte mit demselben Konto anmelden, das ursprünglich eingerichtet wurde."
+      "already_configured": "This account is already configured.",
+      "invalid_auth": "Sign-in failed. Please start the login again (the code is only valid briefly).",
+      "cannot_connect": "Could not reach the Monsieur Cuisine cloud. Please try again later.",
+      "no_url": "Home Assistant does not know its own address. Please set a URL under Settings → System → Network.",
+      "reauth_successful": "Re-authentication successful – the connection is back.",
+      "reauth_account_mismatch": "This sign-in belongs to a different account. Please sign in with the same account that was set up originally."
     }
   },
   "entity": {
     "binary_sensor": {
       "cloud_connection": {
-        "name": "Cloud-Verbindung"
+        "name": "Cloud connection"
       },
       "preheat": {
-        "name": "Vorheizen"
+        "name": "Preheating"
       },
       "scale": {
-        "name": "Waage"
+        "name": "Scale"
       }
     },
     "sensor": {
       "cook_state": {
-        "name": "Kochzustand"
+        "name": "Cooking state"
       },
       "device_mode": {
-        "name": "Betriebsart"
+        "name": "Mode"
       },
       "target_temperature": {
-        "name": "Ziel-Temperatur"
+        "name": "Target temperature"
       },
       "speed": {
-        "name": "Stufe"
+        "name": "Speed"
       },
       "remaining_time": {
-        "name": "Restzeit"
+        "name": "Remaining time"
       },
       "recipe": {
-        "name": "Rezept"
+        "name": "Recipe"
       },
       "step": {
-        "name": "Schritt"
+        "name": "Step"
       },
       "own_recipes": {
-        "name": "Eigene Rezepte"
+        "name": "Own recipes"
       }
     },
     "todo": {
       "shopping_list": {
-        "name": "Einkaufsliste"
+        "name": "Shopping list"
       }
     },
     "calendar": {
       "weekly_planner": {
-        "name": "Wochenplaner"
+        "name": "Weekly planner"
       }
     }
   },
   "services": {
     "send_recipe": {
-      "name": "Rezept an Monsieur Cuisine senden",
-      "description": "Wandelt ein Rezept (Webseite mit schema.org-Daten oder JSON) in ein Monsieur-Cuisine-Rezept mit Maschinenschritten um und legt es im Konto an.",
+      "name": "Send recipe to Monsieur Cuisine",
+      "description": "Converts a recipe (web page with schema.org data or JSON) into a Monsieur Cuisine recipe with machine steps and creates it in your account.",
       "fields": {
         "url": {
-          "name": "Rezept-URL",
-          "description": "Webseite mit Rezept (schema.org/Recipe, z. B. Chefkoch, Mealie)."
+          "name": "Recipe URL",
+          "description": "Web page with a recipe (schema.org/Recipe, e.g. Chefkoch, Mealie)."
         },
         "recipe": {
-          "name": "Rezept (JSON)",
-          "description": "schema.org/Recipe-Objekt als Alternative zur URL."
+          "name": "Recipe (JSON)",
+          "description": "schema.org/Recipe object as an alternative to the URL."
         },
         "recipe_id": {
-          "name": "Bestehendes Rezept",
-          "description": "ID eines eigenen Rezepts, das überschrieben werden soll."
+          "name": "Existing recipe",
+          "description": "ID of one of your recipes to overwrite."
         },
         "dry_run": {
-          "name": "Nur Vorschau",
-          "description": "Nichts anlegen, nur die erkannten Schritte zurückgeben."
+          "name": "Preview only",
+          "description": "Do not create anything, just return the detected steps."
         }
       }
     }

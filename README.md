@@ -13,16 +13,16 @@
 </p>
 
 <p align="center">
-  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=MrVain74&repository=ha-monsieur-cuisine&category=integration"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="In HACS öffnen"></a>
+  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=MrVain74&repository=ha-monsieur-cuisine&category=integration"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="Open in HACS"></a>
 </p>
 
 > ⚠️ **Unofficial.** Not affiliated with Lidl, SilverCrest or Tecpal. Uses the undocumented
 > cloud interface of the Monsieur Cuisine app. May break at any time if the vendor changes things.
 > For your own account only, gentle polling (max. 1 request/second, every 15 minutes).
 
-**Status: Alpha (v0.4.11)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
+**Status: Alpha (v0.4.12)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
-👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) · **Funktionsweise:** [`docs/FUNKTIONSWEISE.md`](docs/FUNKTIONSWEISE.md)
+👉 **Setup guide (German):** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) · **How it works (German):** [`docs/FUNKTIONSWEISE.md`](docs/FUNKTIONSWEISE.md)
 
 ## What it does
 
