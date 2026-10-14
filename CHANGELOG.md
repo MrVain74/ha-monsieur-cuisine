@@ -4,6 +4,48 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.9] – 2026-10-14
+### Neu
+- **Schritt-Text und Gesamtzahl.** Der Schritt-Sensor zeigt weiterhin die
+  Nummer als Zustand, bekommt aber Attribute dazu: `text`, `schritte_gesamt`,
+  `titel` und `schritt_modus`. Damit lässt sich „Schritt 8 von 8: Dampfgaren"
+  anzeigen, ohne am Gerät zu stehen.
+- `McClient.get_recipe(id)` holt das Rezept über **`api/v2/recipes/{id}`**.
+  Der v1-Pfad liefert `servingSizes` nur mit `amount` und `id`, also ohne
+  Schritte – im APK ist `UrlConstant.Recipe.RECIPES_ID` zwar auf v1 deklariert,
+  wird dort aber nirgends benutzt (toter Code, der in die Irre führt).
+- Der Live-Coordinator lädt das Rezept **einmal bei Rezeptwechsel** nachträglich
+  und hält es im Speicher – nicht pro Frame, der Strom pusht im Sekundentakt.
+  Scheitert der Abruf, bleibt es bei der blanken Schrittnummer.
+- Neu: `mcbridge/steps.py` mit der reinen Auswahllogik (kein Netz, kein HA).
+
+### Wichtig dabei – drei Stolperfallen, am echten Rezept geprüft
+- **Die Gesamtzahl hängt an der Portionsgröße.** Bei „Kartoffeln kochen"
+  (ID 57325) hat die 6-Portionen-Größe **7** Schritte, die anderen **8**. Blind
+  `servingSizes[0]` zu nehmen zeigt irgendwann „Schritt 7 von 8". Gewählt wird
+  daher nach `currentServingSizeId` aus dem Strom, sonst
+  `defaultServingSizeId`, sonst die erste.
+- `currentServingSizeId` passt auf `servingSizes[].id` (kleine Ordnungszahlen
+  1, 2, 3) – **nicht** auf `amount` (4, 2, 6).
+- `description` kann **leer** sein; dann trägt `name` den Text (Schritt
+  „Dampfgaren"). Die Anzeige fällt entsprechend zurück.
+- `stepIndex` aus dem Strom ist **1-basiert** und bildet direkt auf `step` ab
+  (am Gerät geprüft: Dampfgar-Schritt meldete 8, `step` war 8). Rückfälle über
+  `order` und die Listenposition sind eingebaut.
+
+### Nicht übernommen
+- `deviceSetting` aus dem Rezept wird **nicht** als Zustand ausgegeben, nur
+  `mode` als Attribut. Es ist kein verlässliches Abbild: Beim Dampfgar-Schritt
+  steht dort `temperature: 0` und `speed: null`, während das Gerät 120 °C und
+  Stufe 1 fuhr. Nur `time: 900` stimmte. Ist-Werte kommen weiter aus dem Strom.
+
+### Tests
+- Neu: `tests/test_steps.py` mit 26 Fällen – Portionsgrößen-Auswahl samt
+  Rückfällen, unterschiedliche Schrittzahlen je Größe, leeres `description`,
+  1-basierte Zuordnung und die Attribute für den Sensor. Der Prüfstand bildet
+  die Eigenheiten des echten Rezepts nach; die Logik wurde zusätzlich gegen die
+  echte API-Antwort gegengeprüft. Gesamt **172 Tests**.
+
 ## [0.4.8] – 2026-10-13
 ### Behoben
 - **„verstrichen"-Attribut der Restzeit.** Beim Countdown zeigte es die Restzeit

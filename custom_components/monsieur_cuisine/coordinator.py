@@ -100,9 +100,16 @@ class McLiveCoordinator(DataUpdateCoordinator[DeviceLiveStatus | None]):
     verbunden und der Token vor jedem Versuch frisch geholt.
     """
 
-    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, auth: Any) -> None:
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry, auth: Any,
+                 client: McClient | None = None) -> None:
         super().__init__(hass, _LOGGER, name=f"{DOMAIN}_live", config_entry=entry)
         self._auth = auth
+        # Für das Nachladen der Rezeptschritte; ohne Client bleibt der
+        # Schritt-Sensor bei der blanken Nummer.
+        self._client = client
+        self.rezept: dict[str, Any] | None = None   # zuletzt geladenes Rezept
+        self._rezept_id: int | None = None          # dessen ID
+        self._rezept_task: asyncio.Task | None = None
         self._task: asyncio.Task | None = None
         self.connected = False
         self.device_id: str | None = None
@@ -220,3 +227,38 @@ class McLiveCoordinator(DataUpdateCoordinator[DeviceLiveStatus | None]):
             f" Probleme={status.problems}" if status.problems else "",
         )
         self.async_set_updated_data(status)
+        self._rezept_sicherstellen(status)
+
+    @callback
+    def _rezept_sicherstellen(self, status: DeviceLiveStatus) -> None:
+        """Bei Rezeptwechsel die Schritte **einmal** nachladen.
+
+        Der Strom pusht im Sekundentakt – nachgeladen wird deshalb nur, wenn
+        sich die Rezept-ID ändert. Das Ergebnis bleibt im Speicher, bis ein
+        anderes Rezept läuft.
+        """
+        rid = status.recipe_id
+        if rid is None or rid == self._rezept_id or self._client is None:
+            return
+        if self._rezept_task is not None and not self._rezept_task.done():
+            return
+        # ID sofort merken, damit ein zweiter Frame nicht nochmal lädt.
+        self._rezept_id = rid
+        self.rezept = None
+        if self.config_entry is not None:
+            self._rezept_task = self.config_entry.async_create_background_task(
+                self.hass, self._rezept_laden(rid), name=f"{DOMAIN}_rezept_{rid}"
+            )
+
+    async def _rezept_laden(self, recipe_id: int) -> None:
+        try:
+            self.rezept = await self._client.get_recipe(recipe_id)
+        except (McApiError, McAuthError) as err:
+            _LOGGER.debug("MC-Live: Rezept %s nicht ladbar: %s", recipe_id, err)
+            return
+        except Exception as err:  # noqa: BLE001 – darf den Strom nie mitnehmen
+            _LOGGER.debug("MC-Live: Rezept %s fehlgeschlagen: %s", recipe_id, err)
+            return
+        _LOGGER.debug("MC-Live: Rezept %s geladen", recipe_id)
+        # Entitäten neu zeichnen – der Status selbst hat sich nicht geändert.
+        self.async_update_listeners()

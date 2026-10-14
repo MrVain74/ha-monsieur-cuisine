@@ -156,6 +156,15 @@ class McClient:
                   "sortBy[0][direction]": "DESC", "q": query}
         return await self._request("GET", "api/v3/auth/user/recipes", params=params)
 
+    async def get_recipe(self, recipe_id: int) -> dict[str, Any]:
+        """Ein Rezept aus dem Katalog samt Schritten.
+
+        Muss **api/v2** sein: ``api/v1/recipes/{id}`` liefert ``servingSizes``
+        nur mit ``amount`` und ``id``, also ohne Schritte. Die Sprache steuert
+        der ``accept-language``-Kopf, den ``_request`` setzt.
+        """
+        return (await self._request("GET", f"api/v2/recipes/{recipe_id}"))["recipe"]
+
     async def get_own_recipe(self, recipe_id: int) -> dict[str, Any]:
         return (await self._request("GET", f"api/v3/auth/user/recipes/{recipe_id}"))["recipe"]
 

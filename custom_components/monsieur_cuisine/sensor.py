@@ -16,6 +16,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DATA_LIVE, DOMAIN, LIVE_MODEL
 from .entity import McLiveEntity
+from .mcbridge.steps import schritt_info
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, add: AddEntitiesCallback) -> None:
@@ -209,11 +210,12 @@ class McLiveRecipe(McLiveEntity, SensorEntity):
 
 
 class McLiveStep(McLiveEntity, SensorEntity):
-    """Nummer des laufenden Rezeptschritts.
+    """Nummer des laufenden Rezeptschritts, mit Text aus den Rezeptdaten.
 
-    Die Gesamtzahl der Schritte schickt der Dienst beim MC3.0 nicht
-    (``totalStepIndex`` fehlt); sie und der Schritt-Text müssten über die
-    Rezept-API nachgeladen werden – noch nicht umgesetzt.
+    Zustand ist die Nummer aus dem Live-Strom; Text und Gesamtzahl kommen aus
+    dem Rezept, das der Coordinator bei Rezeptwechsel einmal nachlädt
+    (``api/v2/recipes/{id}``). Die Portionsgröße wird dabei berücksichtigt –
+    bei manchen Rezepten hat sie unterschiedlich viele Schritte.
     """
 
     _attr_icon = "mdi:format-list-numbered"
@@ -230,6 +232,12 @@ class McLiveStep(McLiveEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        if (st := self.status) is None or st.total_step_index is None:
+        if (st := self.status) is None:
             return {}
-        return {"schritte_gesamt": st.total_step_index}
+        werte = schritt_info(getattr(self.coordinator, "rezept", None),
+                             st.serving_size_id, st.step_index)
+        # Der Strom liefert beim MC3.0 kein totalStepIndex; falls doch mal
+        # eines kommt, nicht die Angabe aus dem Rezept überschreiben.
+        if "schritte_gesamt" not in werte and st.total_step_index is not None:
+            werte["schritte_gesamt"] = st.total_step_index
+        return werte

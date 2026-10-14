@@ -105,7 +105,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Live-Status (Push über gRPC). Läuft neben dem regelmäßigen Abruf und
     # darf die Einrichtung nicht aufhalten: schlägt der Strom fehl, bleiben nur
     # die Live-Entitäten unbestimmt.
-    live = McLiveCoordinator(hass, entry, auth)
+    live = McLiveCoordinator(hass, entry, auth, client)
     live.async_start()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = {
