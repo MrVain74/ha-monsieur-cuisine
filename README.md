@@ -24,6 +24,17 @@
 
 👉 **Setup guide:** [`docs/SETUP.md`](docs/SETUP.md) · **How it works:** [`docs/HOW-IT-WORKS.md`](docs/HOW-IT-WORKS.md) · Deutsch: [Einrichtung](docs/EINRICHTUNG.md) · [Funktionsweise](docs/FUNKTIONSWEISE.md)
 
+## Screenshots
+
+> _Alpha: an example Home Assistant dashboard. To be replaced with shots from a guided recipe (recipe name, “Step N of M”, rising temperature)._
+
+<p align="center">
+  <img src="docs/images/dashboard-overview.png" width="760" alt="Dashboard: live cooking status and weekly planner">
+</p>
+<p align="center">
+  <img src="docs/images/dashboard-shopping.png" width="760" alt="Dashboard: recipe, system and shopping list">
+</p>
+
 ## What it does
 
 | Feature | State |
