@@ -128,6 +128,14 @@ captcha is never bypassed.
 
 Step-by-step: [`docs/SETUP.md`](docs/SETUP.md) (Deutsch: [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md)).
 
+## Testing & other models
+
+Want to help? Bug reports and wishes go to the
+[issues](https://github.com/MrVain74/ha-monsieur-cuisine/issues). Owners of other
+models (MC Compact / Connect / Plus) can help add support by capturing a short
+debug log – see [`docs/TESTING.md`](docs/TESTING.md) (Deutsch:
+[`docs/TESTEN.md`](docs/TESTEN.md)).
+
 ## Development
 
 ```bash
