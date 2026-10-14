@@ -1,10 +1,26 @@
 # Monsieur Cuisine for Home Assistant (unofficial)
 
+<p align="center">
+  <img src="custom_components/monsieur_cuisine/brand/icon.png" width="116" alt="Monsieur Cuisine (unofficial)">
+</p>
+
+<p align="center">
+  <a href="https://github.com/MrVain74/ha-monsieur-cuisine/actions/workflows/tests.yml"><img src="https://github.com/MrVain74/ha-monsieur-cuisine/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/MrVain74/ha-monsieur-cuisine/actions/workflows/hassfest.yml"><img src="https://github.com/MrVain74/ha-monsieur-cuisine/actions/workflows/hassfest.yml/badge.svg" alt="hassfest"></a>
+  <img src="https://img.shields.io/badge/HACS-custom-41BDF5.svg" alt="HACS custom">
+  <img src="https://img.shields.io/github/v/release/MrVain74/ha-monsieur-cuisine?sort=semver&display_name=tag" alt="Release">
+  <img src="https://img.shields.io/github/license/MrVain74/ha-monsieur-cuisine" alt="License">
+</p>
+
+<p align="center">
+  <a href="https://my.home-assistant.io/redirect/hacs_repository/?owner=MrVain74&repository=ha-monsieur-cuisine&category=integration"><img src="https://my.home-assistant.io/badges/hacs_repository.svg" alt="In HACS öffnen"></a>
+</p>
+
 > ⚠️ **Unofficial.** Not affiliated with Lidl, SilverCrest or Tecpal. Uses the undocumented
 > cloud interface of the Monsieur Cuisine app. May break at any time if the vendor changes things.
 > For your own account only, gentle polling (max. 1 request/second, every 15 minutes).
 
-**Status: Alpha (v0.4.10)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
+**Status: Alpha (v0.4.11)** – tested with the *Monsieur Cuisine Smart* (MC3.0).
 
 👉 **Deutsche Einrichtungsanleitung:** [`docs/EINRICHTUNG.md`](docs/EINRICHTUNG.md) · **Funktionsweise:** [`docs/FUNKTIONSWEISE.md`](docs/FUNKTIONSWEISE.md)
 

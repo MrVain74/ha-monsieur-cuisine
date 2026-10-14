@@ -1,0 +1,16 @@
+name: Wunsch / Idee
+description: Eine Funktion oder Verbesserung vorschlagen
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Worum geht es?
+      description: Welche Funktion oder Verbesserung wünschst du dir?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Warum ist das nützlich?
+      description: Was würde es dir im Alltag bringen?

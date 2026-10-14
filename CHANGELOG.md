@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an dieser Integration. Format angelehnt an
 [Keep a Changelog](https://keepachangelog.com/de/). Inoffiziell – keine
 Verbindung zu Lidl, SilverCrest oder Tecpal.
 
+## [0.4.11] – 2026-10-14
+### Auftritt / Präsentation
+- **Eigenes Icon** (`custom_components/monsieur_cuisine/brand/icon.png` +
+  `icon@2x.png`, eigenes Design, kein Hersteller-Logo) – erscheint in HACS und
+  deckt zugleich den HACS-brands-Rückfallpfad ab.
+- **README** mit Logo, Badges (Tests, hassfest, HACS, Release, Lizenz) und
+  **„In HACS öffnen"-Button** (My-Home-Assistant, 1-Klick-Repo).
+- **Issue-Vorlagen** (Fehler/Wunsch) mit Hinweis „keine Zugangsdaten/Tokens/
+  Geräte-IDs posten".
+- **Workflows aufgeteilt** in `tests`, `hassfest`, `hacs` – damit jeder Check
+  ein eigenes (grünes) Badge hat.
+- Keine Funktionsänderung; 172 Tests grün.
+
 ## [0.4.10] – 2026-10-14
 ### Behoben – CI/Validierung grün bekommen
 - **hassfest:** Übersetzungstexte dürfen **keine URLs** enthalten. Der
