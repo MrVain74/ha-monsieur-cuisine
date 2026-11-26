@@ -135,7 +135,12 @@ def _register_services(hass: HomeAssistant) -> None:
         return
 
     async def send_recipe(call: ServiceCall) -> ServiceResponse:
-        entries = list(hass.data.get(DOMAIN, {}).values())
+        domain_data = hass.data.get(DOMAIN, {})
+        entries = [
+            domain_data[entry.entry_id]
+            for entry in hass.config_entries.async_entries(DOMAIN)
+            if entry.entry_id in domain_data
+        ]
         if not entries:
             raise HomeAssistantError("Monsieur Cuisine ist nicht eingerichtet")
         client: McClient = entries[0]["client"]
